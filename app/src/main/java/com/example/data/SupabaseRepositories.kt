@@ -4,8 +4,9 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /**
  * Repositories talking to the shared "dearadeline-withlove" Supabase database
@@ -39,12 +40,11 @@ object AuthRepository {
 object UserRepository {
     suspend fun getCurrentUserProfile(): UserProfileDto? {
         val userId = AuthRepository.currentUserId() ?: return null
+        // decodeSingleOrNull rather than single(): a student who hasn't been
+        // provisioned a User row yet should read as "no profile", not throw.
         return SupabaseClientProvider.postgrest.from("User")
-            .select {
-                filter { eq("id", userId) }
-                single()
-            }
-            .decodeAs<UserProfileDto>()
+            .select { filter { eq("id", userId) } }
+            .decodeSingleOrNull<UserProfileDto>()
     }
 
     suspend fun getChildren(parentId: String): List<UserProfileDto> {
@@ -166,15 +166,15 @@ object StudentJournalRepository {
  * Postgres function, which atomically checks and claims the code.
  */
 object InviteCodeRepository {
-    @Serializable
-    private data class RedeemParams(
-        @SerialName("p_code") val code: String,
-        @SerialName("p_email") val email: String
-    )
-
     suspend fun redeem(code: String, email: String): Boolean {
         return SupabaseClientProvider.postgrest
-            .rpc("redeem_invite_code", RedeemParams(code = code, email = email))
+            .rpc(
+                "redeem_invite_code",
+                buildJsonObject {
+                    put("p_code", code)
+                    put("p_email", email)
+                }
+            )
             .decodeAs<Boolean>()
     }
 }

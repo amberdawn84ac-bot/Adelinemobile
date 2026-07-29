@@ -71,7 +71,8 @@ class MainActivity : ComponentActivity() {
                             scriptureEngine = scriptureEngine,
                             onNavigateToGraduation = { navController.navigate("graduation") },
                             onNavigateToCurriculum = { navController.navigate("curriculum") },
-                            onNavigateToPortfolio = { navController.navigate("portfolio") }
+                            onNavigateToPortfolio = { navController.navigate("portfolio") },
+                            onNavigateToHollow = { navController.navigate("hollow") }
                         )
                     }
                     composable("graduation") {
@@ -86,6 +87,11 @@ class MainActivity : ComponentActivity() {
                     composable("memory_brain") {
                         MemoryBrainScreen(chatRepository = chatRepository) { navController.popBackStack() }
                     }
+                    composable("hollow") {
+                        com.example.ui.game.AdelinesHollow(
+                            onExit = { navController.popBackStack() }
+                        )
+                    }
                 }
             }
         }
@@ -99,7 +105,8 @@ fun DearAdelineApp(
     scriptureEngine: com.example.data.ScriptureEngine,
     onNavigateToGraduation: () -> Unit,
     onNavigateToCurriculum: () -> Unit,
-    onNavigateToPortfolio: () -> Unit
+    onNavigateToPortfolio: () -> Unit,
+    onNavigateToHollow: () -> Unit
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
@@ -122,6 +129,10 @@ fun DearAdelineApp(
                 Spacer(Modifier.height(16.dp))
                 
                 DrawerItem("Dashboard", Icons.Rounded.Home, true) { coroutineScope.launch { drawerState.close() } }
+                DrawerItem("Adeline's Hollow", Icons.Rounded.Explore, false) {
+                    coroutineScope.launch { drawerState.close() }
+                    onNavigateToHollow()
+                }
                 DrawerItem("Portfolio", Icons.Rounded.Folder, false) { 
                     coroutineScope.launch { drawerState.close() }
                     onNavigateToPortfolio()
