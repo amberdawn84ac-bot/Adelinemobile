@@ -1,0 +1,6 @@
+{
+  "name": "Dear Adeline",
+  "description": "Homeschooling planner, personalized lesson plans, and digital portfolio with AI concierge.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
