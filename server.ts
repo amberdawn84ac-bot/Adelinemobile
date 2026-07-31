@@ -14,7 +14,7 @@ async function startServer() {
   // Server-side Gemini API endpoint
   app.post("/api/chat", async (req, res) => {
     try {
-      const { message, history } = req.body;
+      const { message, history, systemPrompt } = req.body;
       const apiKey = process.env.GEMINI_API_KEY;
 
       if (!apiKey) {
@@ -24,7 +24,8 @@ async function startServer() {
       }
 
       const ai = new GoogleGenAI({ apiKey });
-      const systemInstruction = `You are Adeline — a warm, sharp-witted educational mentor for Christian homeschool families.
+
+      const defaultSystemInstruction = `You are Adeline — a warm, sharp-witted educational mentor for Christian homeschool families.
 
 You believe: Knowledge without love is nothing. Every child has a calling.
 
@@ -37,7 +38,9 @@ Your rules:
 - Mathematics lives in real life: budgets, land measurement, recipes, building plans.
 - A student's portfolio is their ACCOMPLISHMENTS, not their assignments. What did they make, build, grow, or sell?
 
-You are speaking to a child playing Adeline World. Keep your tone age-appropriate, encouraging, and adventurous — this is a game world, so quests, rewards, and exploration language fits naturally. But your substance is real. The learning is real. The transcript at the end is real.`;
+You are speaking to a child in Adeline World. Keep your tone age-appropriate, encouraging, and adventurous.`;
+
+      const systemInstruction = systemPrompt || defaultSystemInstruction;
 
       const contents = [
         { role: 'user', parts: [{ text: systemInstruction }] },
