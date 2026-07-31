@@ -1,30 +1,36 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { AvatarData, RoomId, DEFAULT_AVATAR } from '../types/game'
+import { AvatarData, RoomId, DEFAULT_AVATAR, LifeMapEntry, SEASON_TIERS, Track } from '../types/game'
 import AvatarBuilder from '../components/avatar/AvatarBuilder'
 import GameHUD from '../components/hud/GameHUD'
+import AdelineChat from '../components/chat/AdelineChat'
 import HubWorld from '../components/world/HubWorld'
+import LifeMap from '../components/life-map/LifeMap'
+import SeasonPass from '../components/season-pass/SeasonPass'
+import RoomMission from '../components/rooms/RoomMission'
 import MathMines from '../components/rooms/MathMines'
 import StoryForest from '../components/rooms/StoryForest'
 import ScienceLab from '../components/rooms/ScienceLab'
 import HomesteadFarm from '../components/rooms/HomesteadFarm'
 import TruthArchive from '../components/rooms/TruthArchive'
 import { supabase } from '../lib/supabase'
+import { logActivity } from '../lib/lifeMapService'
 
-type GameScreen = 'avatar_builder' | 'hub' | 'room'
+type GameScreen = 'avatar_builder' | 'chat' | 'hub' | 'room'
+type Overlay = 'life_map' | 'season_pass' | null
+
+const ROOM_CONFIG: Record<RoomId, { label: string; emoji: string; tracks: Track[]; context: string }> = {
+  math_mines:     { label: 'Math Mines',      emoji: '⛏️', tracks: ['APPLIED_MATHEMATICS'],                    context: 'Focus on real-world math: farming budgets, measurements, building calculations, market pricing.' },
+  story_forest:   { label: 'Story Forest',    emoji: '🌲', tracks: ['ENGLISH_LITERATURE'],                     context: 'Focus on reading, writing, storytelling, rhetoric, and comprehension.' },
+  science_lab:    { label: 'Science Lab',     emoji: '🔬', tracks: ['CREATION_SCIENCE'],                       context: 'Focus on creation science, nature observation, household experiments, animal biology.' },
+  homestead_farm: { label: 'Homestead Farm',  emoji: '🌾', tracks: ['HOMESTEADING', 'APPLIED_MATHEMATICS'],    context: 'Focus on farming, animal husbandry, canning, building, selling at market, off-grid living.' },
+  truth_archive:  { label: 'Truth Archive',   emoji: '📜', tracks: ['TRUTH_HISTORY', 'JUSTICE_CHANGEMAKING'], context: 'Focus on primary source history, follow the money, who profits, real unfiltered events.' },
+}
 
 function parseAvatar(data: Record<string, unknown>): AvatarData | null {
   if (!data || !data.skinTone) return null
   return data as unknown as AvatarData
-}
-
-const ROOM_LABELS: Record<RoomId, string> = {
-  math_mines:     '⛏️ Math Mines',
-  story_forest:   '🌲 Story Forest',
-  science_lab:    '🔬 Science Lab',
-  homestead_farm: '🌾 Homestead Farm',
-  truth_archive:  '📜 Truth Archive',
 }
 
 export default function GameShell() {
@@ -34,40 +40,39 @@ export default function GameShell() {
   const storedAvatar = activeChild?.avatar_data ? parseAvatar(activeChild.avatar_data as Record<string, unknown>) : null
   const guestAvatarRaw = guestSession?.avatarData
   const guestAvatar = guestAvatarRaw && Object.keys(guestAvatarRaw).length > 0
-    ? parseAvatar(guestAvatarRaw as Record<string, unknown>)
-    : null
-
+    ? parseAvatar(guestAvatarRaw as Record<string, unknown>) : null
   const hasAvatar = storedAvatar !== null || guestAvatar !== null
-  const [screen, setScreen] = useState<GameScreen>(hasAvatar ? 'hub' : 'avatar_builder')
+
+  const [screen, setScreen] = useState<GameScreen>(hasAvatar ? 'chat' : 'avatar_builder')
   const [avatarData, setAvatarData] = useState<AvatarData>(storedAvatar ?? guestAvatar ?? DEFAULT_AVATAR)
   const [currentRoom, setCurrentRoom] = useState<RoomId | null>(null)
+  const [roomMode, setRoomMode] = useState<'quiz' | 'mission'>('mission')
   const [localXP, setLocalXP] = useState(activeChild?.xp ?? guestSession?.xp ?? 0)
   const [localCoins, setLocalCoins] = useState(activeChild?.ade_coins ?? guestSession?.adeCoins ?? 0)
-  const [chatOpen, setChatOpen] = useState(false)
-  const [chatMessages, setChatMessages] = useState<{ text: string; fromAdeline: boolean }[]>([
-    { text: "Welcome to Adeline World! What would you like to explore today?", fromAdeline: true }
-  ])
-  const [chatInput, setChatInput] = useState('')
-  const [chatLoading, setChatLoading] = useState(false)
+  const [overlay, setOverlay] = useState<Overlay>(null)
+  const [lifeMapEntries, setLifeMapEntries] = useState<LifeMapEntry[]>([])
+  const [claimedTiers, setClaimedTiers] = useState<number[]>([])
+  const [showRooms, setShowRooms] = useState(false)
 
   const playerName = activeChild?.display_name ?? guestSession?.displayName ?? 'Explorer'
   const isGuest = !activeChild && !!guestSession
 
-  // suppress unused variable warning
-  void parentAccount
+  useEffect(() => {
+    if (activeChild) {
+      supabase.from('aw_season_pass').select('claimed_tiers').eq('student_id', activeChild.id).single()
+        .then(({ data }) => { if (data) setClaimedTiers(data.claimed_tiers ?? []) })
+    }
+  }, [activeChild])
 
   async function saveAvatar(avatar: AvatarData) {
     setAvatarData(avatar)
     if (activeChild) {
-      await supabase
-        .from('aw_student_profiles')
-        .update({ avatar_data: avatar as unknown as Record<string, unknown> })
-        .eq('id', activeChild.id)
+      await supabase.from('aw_student_profiles')
+        .update({ avatar_data: avatar as unknown as Record<string, unknown> }).eq('id', activeChild.id)
     } else if (guestSession) {
-      const updated = { ...guestSession, avatarData: avatar }
-      localStorage.setItem('adeline_guest', JSON.stringify(updated))
+      localStorage.setItem('adeline_guest', JSON.stringify({ ...guestSession, avatarData: avatar }))
     }
-    setScreen('hub')
+    setScreen('chat')
   }
 
   async function addXP(amount: number) {
@@ -86,153 +91,254 @@ export default function GameShell() {
     }
   }
 
-  const enterRoom = useCallback((roomId: RoomId) => {
-    setCurrentRoom(roomId)
-    setScreen('room')
-  }, [])
-
-  function exitRoom() {
-    setCurrentRoom(null)
-    setScreen('hub')
+  function handleLifeMapEntry(entry: LifeMapEntry) {
+    setLifeMapEntries(prev => [entry, ...prev])
   }
 
-  async function sendChatMessage() {
-    if (!chatInput.trim() || chatLoading) return
-    const userMsg = chatInput.trim()
-    setChatInput('')
-    setChatMessages(prev => [...prev, { text: userMsg, fromAdeline: false }])
-    setChatLoading(true)
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMsg, history: [] })
-      })
-      const data = await res.json()
-      setChatMessages(prev => [...prev, { text: data.reply, fromAdeline: true }])
-    } catch {
-      setChatMessages(prev => [...prev, { text: "My thoughts got a little tangled — try again!", fromAdeline: true }])
-    } finally {
-      setChatLoading(false)
+  async function handleRoomMissionComplete(description: string, tracks: Track[], xp: number, coins: number) {
+    addXP(xp)
+    addCoins(coins)
+    if (activeChild) {
+      const entry = await logActivity(activeChild.id, description, tracks, xp, coins, 'room_mission')
+      if (entry) handleLifeMapEntry(entry)
     }
   }
+
+  async function claimSeasonTier(tier: number, coinsToAdd: number) {
+    const newClaimed = [...claimedTiers, tier]
+    setClaimedTiers(newClaimed)
+    if (coinsToAdd > 0) addCoins(coinsToAdd)
+    if (activeChild) {
+      await supabase.from('aw_season_pass')
+        .upsert({ student_id: activeChild.id, claimed_tiers: newClaimed }, { onConflict: 'student_id' })
+    }
+  }
+
+  const enterRoom = useCallback((roomId: RoomId, mode: 'quiz' | 'mission' = 'mission') => {
+    setCurrentRoom(roomId)
+    setRoomMode(mode)
+    setScreen('room')
+    setShowRooms(false)
+  }, [])
 
   async function handleSignOut() {
     await signOut()
     navigate('/')
   }
 
-  const roomLabel = currentRoom ? ROOM_LABELS[currentRoom] : undefined
   const hudPlayer = activeChild ? { ...activeChild, xp: localXP, ade_coins: localCoins } : null
   const hudGuest = guestSession ? { ...guestSession, xp: localXP, adeCoins: localCoins } : null
 
-  return (
-    <div className="w-screen h-screen overflow-hidden relative">
+  // ── Avatar Builder ──
+  if (screen === 'avatar_builder') {
+    return (
+      <AvatarBuilder
+        initialAvatar={storedAvatar ?? guestAvatar ?? undefined}
+        playerName={playerName}
+        onSave={saveAvatar}
+      />
+    )
+  }
 
-      {screen === 'avatar_builder' && (
-        <AvatarBuilder
-          initialAvatar={storedAvatar ?? guestAvatar ?? undefined}
-          playerName={playerName}
-          onSave={saveAvatar}
+  // ── Room view ──
+  if (screen === 'room' && currentRoom) {
+    const config = ROOM_CONFIG[currentRoom]
+    return (
+      <div className="w-screen h-screen overflow-hidden relative">
+        <GameHUD
+          player={hudPlayer}
+          guestSession={hudGuest}
+          avatarData={avatarData}
+          roomLabel={`${config.emoji} ${config.label}`}
+          onExitRoom={() => { setCurrentRoom(null); setScreen('chat') }}
+          onSignOut={handleSignOut}
         />
-      )}
-
-      {(screen === 'hub' || screen === 'room') && (
-        <>
-          <GameHUD
-            player={hudPlayer}
-            guestSession={hudGuest}
-            avatarData={avatarData}
-            roomLabel={roomLabel}
-            onExitRoom={screen === 'room' ? exitRoom : undefined}
-            onSignOut={handleSignOut}
-          />
-
-          <div className="w-full h-full pt-16">
-            {screen === 'hub' && (
-              <HubWorld
-                avatarData={avatarData}
-                playerName={playerName}
-                onEnterRoom={enterRoom}
-                onChatAdeline={() => setChatOpen(true)}
-              />
-            )}
-            {screen === 'room' && currentRoom === 'math_mines' && (
-              <MathMines playerName={playerName} onXpEarned={addXP} onCoinsEarned={addCoins} />
-            )}
-            {screen === 'room' && currentRoom === 'story_forest' && (
-              <StoryForest playerName={playerName} onXpEarned={addXP} onCoinsEarned={addCoins} />
-            )}
-            {screen === 'room' && currentRoom === 'science_lab' && (
-              <ScienceLab playerName={playerName} onXpEarned={addXP} onCoinsEarned={addCoins} />
-            )}
-            {screen === 'room' && currentRoom === 'homestead_farm' && (
-              <HomesteadFarm playerName={playerName} onXpEarned={addXP} onCoinsEarned={addCoins} />
-            )}
-            {screen === 'room' && currentRoom === 'truth_archive' && (
-              <TruthArchive playerName={playerName} onXpEarned={addXP} onCoinsEarned={addCoins} />
-            )}
-          </div>
-
-          {isGuest && (
-            <div className="fixed bottom-4 right-4 bg-amber-500 text-white text-xs font-semibold px-4 py-2 rounded-2xl shadow-lg max-w-xs">
-              💾 Guest mode — progress not saved to cloud.{' '}
-              <button onClick={handleSignOut} className="underline">Create account</button>
-            </div>
+        <div className="w-full h-full pt-16">
+          {roomMode === 'mission' ? (
+            <RoomMission
+              roomId={currentRoom}
+              roomLabel={config.label}
+              roomEmoji={config.emoji}
+              roomTracks={config.tracks}
+              playerName={playerName}
+              systemContext={config.context}
+              onComplete={handleRoomMissionComplete}
+              onBack={() => { setCurrentRoom(null); setScreen('chat') }}
+            />
+          ) : (
+            <>
+              {currentRoom === 'math_mines'     && <MathMines     playerName={playerName} onXpEarned={addXP} onCoinsEarned={addCoins} />}
+              {currentRoom === 'story_forest'   && <StoryForest   playerName={playerName} onXpEarned={addXP} onCoinsEarned={addCoins} />}
+              {currentRoom === 'science_lab'    && <ScienceLab    playerName={playerName} onXpEarned={addXP} onCoinsEarned={addCoins} />}
+              {currentRoom === 'homestead_farm' && <HomesteadFarm playerName={playerName} onXpEarned={addXP} onCoinsEarned={addCoins} />}
+              {currentRoom === 'truth_archive'  && <TruthArchive  playerName={playerName} onXpEarned={addXP} onCoinsEarned={addCoins} />}
+            </>
           )}
-        </>
-      )}
+        </div>
+      </div>
+    )
+  }
 
-      {chatOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl">
-            <div className="bg-amber-600 px-5 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/50">
-                  <img src="/adeline_portrait.png" alt="Adeline" className="w-full h-full object-cover"
-                    onError={e => { e.currentTarget.style.display='none' }} />
-                </div>
-                <div>
-                  <p className="text-white font-bold">Adeline</p>
-                  <p className="text-amber-200 text-xs">Your learning guide</p>
-                </div>
-              </div>
-              <button onClick={() => setChatOpen(false)} className="text-white/80 hover:text-white text-xl">✕</button>
-            </div>
+  // ── Hub World (2D exploration) ──
+  if (screen === 'hub') {
+    return (
+      <div className="w-screen h-screen overflow-hidden relative">
+        <GameHUD
+          player={hudPlayer}
+          guestSession={hudGuest}
+          avatarData={avatarData}
+          onExitRoom={() => setScreen('chat')}
+          onSignOut={handleSignOut}
+        />
+        <div className="w-full h-full pt-16">
+          <HubWorld
+            avatarData={avatarData}
+            playerName={playerName}
+            onEnterRoom={(id) => enterRoom(id, 'mission')}
+            onChatAdeline={() => setScreen('chat')}
+          />
+        </div>
+      </div>
+    )
+  }
 
-            <div className="h-64 overflow-y-auto p-4 space-y-3 bg-amber-50/30">
-              {chatMessages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.fromAdeline ? '' : 'justify-end'}`}>
-                  <div className={`max-w-[85%] px-4 py-2 rounded-2xl text-sm ${msg.fromAdeline ? 'bg-white text-slate-800 border border-amber-100' : 'bg-amber-600 text-white'}`}>
-                    {msg.text}
-                  </div>
-                </div>
-              ))}
-              {chatLoading && (
-                <div className="flex gap-1 items-center px-4 py-2 bg-white rounded-2xl w-fit">
-                  <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 border-t border-amber-100 flex gap-2">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={e => setChatInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && sendChatMessage()}
-                placeholder="Ask Adeline anything..."
-                className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-amber-400"
-              />
-              <button onClick={sendChatMessage} disabled={!chatInput.trim() || chatLoading}
-                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-xl text-sm font-semibold">
-                Send
-              </button>
-            </div>
+  // ── Main Chat Screen ──
+  return (
+    <div className="w-screen h-screen overflow-hidden flex flex-col bg-amber-50/30">
+      {/* Top bar */}
+      <div className="h-14 bg-white border-b border-amber-100 flex items-center justify-between px-4 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-amber-400">
+            <img src="/adeline_portrait.png" alt="Adeline" className="w-full h-full object-cover"
+              onError={e => { e.currentTarget.style.display = 'none' }} />
+          </div>
+          <div>
+            <p className="font-bold text-slate-800 text-sm">Adeline</p>
+            <p className="text-xs text-amber-600">Learning Guide</p>
           </div>
         </div>
+
+        <div className="flex items-center gap-2">
+          <div className="hidden sm:flex items-center gap-3 bg-slate-100 rounded-xl px-3 py-1.5">
+            <span className="text-xs font-bold text-amber-700">{localXP} XP</span>
+            <span className="text-slate-300">·</span>
+            <span className="text-xs font-bold text-amber-700">🪙 {localCoins}</span>
+          </div>
+
+          <button onClick={() => setOverlay('life_map')}
+            className="px-3 py-1.5 text-xs font-semibold bg-violet-100 hover:bg-violet-200 text-violet-700 rounded-xl transition-all">
+            🗺️ Life Map
+          </button>
+          <button onClick={() => setOverlay('season_pass')}
+            className="px-3 py-1.5 text-xs font-semibold bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl transition-all">
+            🌟 Pass
+          </button>
+          <button onClick={() => setScreen('hub')}
+            className="px-3 py-1.5 text-xs font-semibold bg-green-100 hover:bg-green-200 text-green-700 rounded-xl transition-all">
+            🏘️ Hub
+          </button>
+          {parentAccount && (
+            <button onClick={() => navigate('/parent-dashboard')}
+              className="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-all">
+              👪
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Chat */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <AdelineChat
+            studentId={activeChild?.id ?? null}
+            playerName={playerName}
+            currentXP={localXP}
+            onXpEarned={addXP}
+            onCoinsEarned={addCoins}
+            onLifeMapEntry={handleLifeMapEntry}
+          />
+        </div>
+
+        {/* Room sidebar — desktop */}
+        <div className="hidden lg:flex flex-col w-56 bg-white border-l border-amber-100 p-3 gap-2 overflow-y-auto shrink-0">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider px-1 mb-1">Enter a Room</p>
+          {(Object.entries(ROOM_CONFIG) as [RoomId, typeof ROOM_CONFIG[RoomId]][]).map(([id, cfg]) => (
+            <div key={id} className="rounded-xl border border-slate-100 overflow-hidden">
+              <button
+                onClick={() => enterRoom(id, 'mission')}
+                className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-amber-50 transition-all text-left"
+              >
+                <span className="text-xl">{cfg.emoji}</span>
+                <span className="text-sm font-semibold text-slate-700">{cfg.label}</span>
+              </button>
+              <button
+                onClick={() => enterRoom(id, 'quiz')}
+                className="w-full px-3 py-1.5 text-xs text-slate-400 hover:text-slate-600 hover:bg-slate-50 border-t border-slate-100 transition-all text-left"
+              >
+                Quick quiz →
+              </button>
+            </div>
+          ))}
+
+          <div className="mt-2 pt-2 border-t border-slate-100">
+            <button
+              onClick={handleSignOut}
+              className="w-full text-xs text-slate-400 hover:text-slate-600 py-2 rounded-lg hover:bg-slate-50 transition-all"
+            >
+              {isGuest ? 'Leave Game' : 'Sign Out'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile room launcher */}
+      <div className="lg:hidden fixed bottom-20 right-4 z-30">
+        <button
+          onClick={() => setShowRooms(!showRooms)}
+          className="w-14 h-14 bg-amber-500 hover:bg-amber-400 text-white rounded-full shadow-xl text-2xl flex items-center justify-center transition-all"
+        >
+          {showRooms ? '✕' : '🏫'}
+        </button>
+      </div>
+
+      {showRooms && (
+        <div className="lg:hidden fixed bottom-36 right-4 z-30 bg-white rounded-2xl shadow-xl border border-amber-100 p-3 w-52 space-y-1">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider px-1 mb-2">Enter a Room</p>
+          {(Object.entries(ROOM_CONFIG) as [RoomId, typeof ROOM_CONFIG[RoomId]][]).map(([id, cfg]) => (
+            <button
+              key={id}
+              onClick={() => enterRoom(id, 'mission')}
+              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-amber-50 rounded-xl transition-all text-left"
+            >
+              <span className="text-xl">{cfg.emoji}</span>
+              <span className="text-sm font-semibold text-slate-700">{cfg.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {isGuest && (
+        <div className="lg:hidden fixed bottom-4 left-4 right-20 bg-amber-500 text-white text-xs font-semibold px-4 py-2 rounded-2xl shadow-lg">
+          💾 Guest — progress not saved.{' '}
+          <button onClick={handleSignOut} className="underline">Create account</button>
+        </div>
+      )}
+
+      {overlay === 'life_map' && (
+        <LifeMap
+          studentId={activeChild?.id ?? null}
+          localEntries={lifeMapEntries}
+          onClose={() => setOverlay(null)}
+        />
+      )}
+      {overlay === 'season_pass' && (
+        <SeasonPass
+          currentXP={localXP}
+          claimedTiers={claimedTiers}
+          onClaimTier={claimSeasonTier}
+          onClose={() => setOverlay(null)}
+        />
       )}
     </div>
   )
