@@ -1,5 +1,48 @@
 import { AvatarData } from '../../types/game'
-import { getOutfit } from './avatarLayers'
+
+// Sprite sheet config: each sheet is a grid of poses
+// col/row are 0-indexed positions within the sheet
+const SPRITE_CONFIG: Record<string, {
+  sheet: string
+  cols: number
+  rows: number
+  col: number
+  row: number
+}> = {
+  // Young girl — 3×3 grid
+  girl_young_0: { sheet: '/avatar_girl_young.png', cols: 3, rows: 3, col: 0, row: 0 },
+  girl_young_1: { sheet: '/avatar_girl_young.png', cols: 3, rows: 3, col: 1, row: 0 },
+  girl_young_2: { sheet: '/avatar_girl_young.png', cols: 3, rows: 3, col: 2, row: 0 },
+  girl_young_3: { sheet: '/avatar_girl_young.png', cols: 3, rows: 3, col: 0, row: 1 },
+  girl_young_4: { sheet: '/avatar_girl_young.png', cols: 3, rows: 3, col: 1, row: 1 },
+  girl_young_5: { sheet: '/avatar_girl_young.png', cols: 3, rows: 3, col: 2, row: 1 },
+  girl_young_6: { sheet: '/avatar_girl_young.png', cols: 3, rows: 3, col: 0, row: 2 },
+  girl_young_7: { sheet: '/avatar_girl_young.png', cols: 3, rows: 3, col: 1, row: 2 },
+  girl_young_8: { sheet: '/avatar_girl_young.png', cols: 3, rows: 3, col: 2, row: 2 },
+  // Young boy — 3×4 grid (last row has 2 poses)
+  boy_young_0: { sheet: '/avatar_boy_young.png', cols: 3, rows: 4, col: 0, row: 0 },
+  boy_young_1: { sheet: '/avatar_boy_young.png', cols: 3, rows: 4, col: 1, row: 0 },
+  boy_young_2: { sheet: '/avatar_boy_young.png', cols: 3, rows: 4, col: 2, row: 0 },
+  boy_young_3: { sheet: '/avatar_boy_young.png', cols: 3, rows: 4, col: 0, row: 1 },
+  boy_young_4: { sheet: '/avatar_boy_young.png', cols: 3, rows: 4, col: 1, row: 1 },
+  boy_young_5: { sheet: '/avatar_boy_young.png', cols: 3, rows: 4, col: 2, row: 1 },
+  boy_young_6: { sheet: '/avatar_boy_young.png', cols: 3, rows: 4, col: 0, row: 2 },
+  boy_young_7: { sheet: '/avatar_boy_young.png', cols: 3, rows: 4, col: 1, row: 2 },
+  boy_young_8: { sheet: '/avatar_boy_young.png', cols: 3, rows: 4, col: 2, row: 2 },
+  // Older kids — 3×4 grid: rows 0-1 = girls (middle/high), rows 2-3 = boys (middle/high)
+  girl_middle_0: { sheet: '/avatar_older_kids.png', cols: 3, rows: 4, col: 0, row: 0 },
+  girl_middle_1: { sheet: '/avatar_older_kids.png', cols: 3, rows: 4, col: 1, row: 0 },
+  girl_middle_2: { sheet: '/avatar_older_kids.png', cols: 3, rows: 4, col: 2, row: 0 },
+  girl_high_0:   { sheet: '/avatar_older_kids.png', cols: 3, rows: 4, col: 0, row: 1 },
+  girl_high_1:   { sheet: '/avatar_older_kids.png', cols: 3, rows: 4, col: 1, row: 1 },
+  girl_high_2:   { sheet: '/avatar_older_kids.png', cols: 3, rows: 4, col: 2, row: 1 },
+  boy_middle_0:  { sheet: '/avatar_older_kids.png', cols: 3, rows: 4, col: 0, row: 2 },
+  boy_middle_1:  { sheet: '/avatar_older_kids.png', cols: 3, rows: 4, col: 1, row: 2 },
+  boy_middle_2:  { sheet: '/avatar_older_kids.png', cols: 3, rows: 4, col: 2, row: 2 },
+  boy_high_0:    { sheet: '/avatar_older_kids.png', cols: 3, rows: 4, col: 0, row: 3 },
+  boy_high_1:    { sheet: '/avatar_older_kids.png', cols: 3, rows: 4, col: 1, row: 3 },
+  boy_high_2:    { sheet: '/avatar_older_kids.png', cols: 3, rows: 4, col: 2, row: 3 },
+}
 
 interface Props {
   avatar: AvatarData
@@ -7,136 +50,28 @@ interface Props {
   className?: string
 }
 
-function HairShape({ style, color }: { style: AvatarData['hairStyle']; color: string }) {
-  switch (style) {
-    case 'short':
-      return <ellipse cx="50" cy="32" rx="26" ry="18" fill={color} />
-    case 'long':
-      return (
-        <g fill={color}>
-          <ellipse cx="50" cy="30" rx="26" ry="18" />
-          <rect x="24" y="38" width="8" height="45" rx="4" />
-          <rect x="68" y="38" width="8" height="45" rx="4" />
-        </g>
-      )
-    case 'curly':
-      return (
-        <g fill={color}>
-          <ellipse cx="50" cy="28" rx="30" ry="22" />
-          <ellipse cx="22" cy="42" rx="10" ry="12" />
-          <ellipse cx="78" cy="42" rx="10" ry="12" />
-        </g>
-      )
-    case 'braids':
-      return (
-        <g fill={color}>
-          <ellipse cx="50" cy="30" rx="26" ry="18" />
-          <rect x="26" y="44" width="7" height="50" rx="3" />
-          <rect x="67" y="44" width="7" height="50" rx="3" />
-          <ellipse cx="29" cy="96" rx="5" ry="4" />
-          <ellipse cx="71" cy="96" rx="5" ry="4" />
-        </g>
-      )
-    case 'ponytail':
-      return (
-        <g fill={color}>
-          <ellipse cx="50" cy="30" rx="26" ry="18" />
-          <ellipse cx="74" cy="28" rx="8" ry="6" />
-          <rect x="72" y="28" width="6" height="30" rx="3" />
-          <ellipse cx="75" cy="60" rx="6" ry="5" />
-        </g>
-      )
-  }
-}
-
-function EyeShape({ style }: { style: AvatarData['eyeStyle'] }) {
-  switch (style) {
-    case 'round':
-      return (
-        <g fill="#1a1a2e">
-          <circle cx="38" cy="55" r="5" />
-          <circle cx="62" cy="55" r="5" />
-          <circle cx="40" cy="53" r="1.5" fill="white" />
-          <circle cx="64" cy="53" r="1.5" fill="white" />
-        </g>
-      )
-    case 'almond':
-      return (
-        <g fill="#1a1a2e">
-          <ellipse cx="38" cy="55" rx="6" ry="4" />
-          <ellipse cx="62" cy="55" rx="6" ry="4" />
-          <circle cx="40" cy="54" r="1.5" fill="white" />
-          <circle cx="64" cy="54" r="1.5" fill="white" />
-        </g>
-      )
-    case 'wide':
-      return (
-        <g fill="#1a1a2e">
-          <circle cx="38" cy="55" r="6.5" />
-          <circle cx="62" cy="55" r="6.5" />
-          <circle cx="40" cy="52" r="2" fill="white" />
-          <circle cx="64" cy="52" r="2" fill="white" />
-        </g>
-      )
-  }
-}
-
-function AccessoryShape({ id, hairColor }: { id: AvatarData['accessoryId']; hairColor: string }) {
-  switch (id) {
-    case 'hat':
-      return (
-        <g fill={hairColor}>
-          <rect x="24" y="18" width="52" height="8" rx="3" />
-          <rect x="32" y="5" width="36" height="16" rx="4" />
-        </g>
-      )
-    case 'bow':
-      return (
-        <g fill="#E91E8C">
-          <ellipse cx="35" cy="16" rx="10" ry="7" />
-          <ellipse cx="65" cy="16" rx="10" ry="7" />
-          <circle cx="50" cy="16" r="5" />
-        </g>
-      )
-    case 'crown':
-      return (
-        <g fill="#F1C40F">
-          <rect x="28" y="18" width="44" height="8" rx="2" />
-          <polygon points="28,18 35,6 42,18" />
-          <polygon points="43,18 50,6 57,18" />
-          <polygon points="58,18 65,6 72,18" />
-        </g>
-      )
-    case 'none':
-    default:
-      return null
-  }
-}
-
 export default function AvatarRenderer({ avatar, size = 80, className = '' }: Props) {
-  const outfit = getOutfit(avatar.outfitId)
-  const width = size
-  const height = Math.round(size * 1.2)
+  const cfg = SPRITE_CONFIG[avatar.character] ?? SPRITE_CONFIG['girl_young_4']
+
+  // background-size: the full sheet scaled so each cell = size×size
+  const bgWidth = cfg.cols * size
+  const bgHeight = cfg.rows * size
+  const bgX = -(cfg.col * size)
+  const bgY = -(cfg.row * size)
 
   return (
-    <svg
-      width={width}
-      height={height}
-      viewBox="0 0 100 120"
-      className={className}
+    <div
+      className={`rounded-xl overflow-hidden shrink-0 ${className}`}
+      style={{
+        width: size,
+        height: size,
+        backgroundImage: `url(${cfg.sheet})`,
+        backgroundSize: `${bgWidth}px ${bgHeight}px`,
+        backgroundPosition: `${bgX}px ${bgY}px`,
+        backgroundRepeat: 'no-repeat',
+        border: `3px solid ${avatar.displayColor}`,
+      }}
       aria-label="Player avatar"
-    >
-      <rect x="28" y="78" width="44" height="38" rx="8" fill={outfit.color} />
-      <rect x="42" y="78" width="16" height="12" rx="4" fill={outfit.accent} />
-      <rect x="44" y="70" width="12" height="12" rx="4" fill={avatar.skinTone} />
-      <ellipse cx="50" cy="50" rx="26" ry="28" fill={avatar.skinTone} />
-      <HairShape style={avatar.hairStyle} color={avatar.hairColor} />
-      <ellipse cx="24" cy="52" rx="4" ry="6" fill={avatar.skinTone} />
-      <ellipse cx="76" cy="52" rx="4" ry="6" fill={avatar.skinTone} />
-      <EyeShape style={avatar.eyeStyle} />
-      <ellipse cx="50" cy="62" rx="3" ry="2" fill="rgba(0,0,0,0.12)" />
-      <path d="M 40 68 Q 50 75 60 68" stroke="rgba(0,0,0,0.25)" strokeWidth="2" fill="none" strokeLinecap="round" />
-      <AccessoryShape id={avatar.accessoryId} hairColor={avatar.hairColor} />
-    </svg>
+    />
   )
 }

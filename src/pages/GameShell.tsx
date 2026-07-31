@@ -35,7 +35,7 @@ const ROOM_CONFIG: Record<RoomId, { label: string; emoji: string; tracks: Track[
 }
 
 function parseAvatar(data: Record<string, unknown>): AvatarData | null {
-  if (!data || !data.skinTone) return null
+  if (!data || !data.character) return null
   return data as unknown as AvatarData
 }
 

@@ -1,10 +1,18 @@
+export type AvatarCharacter =
+  | 'girl_young_0' | 'girl_young_1' | 'girl_young_2'
+  | 'girl_young_3' | 'girl_young_4' | 'girl_young_5'
+  | 'girl_young_6' | 'girl_young_7' | 'girl_young_8'
+  | 'boy_young_0'  | 'boy_young_1'  | 'boy_young_2'
+  | 'boy_young_3'  | 'boy_young_4'  | 'boy_young_5'
+  | 'boy_young_6'  | 'boy_young_7'  | 'boy_young_8'
+  | 'girl_middle_0' | 'girl_middle_1' | 'girl_middle_2'
+  | 'girl_high_0'   | 'girl_high_1'   | 'girl_high_2'
+  | 'boy_middle_0'  | 'boy_middle_1'  | 'boy_middle_2'
+  | 'boy_high_0'    | 'boy_high_1'    | 'boy_high_2'
+
 export interface AvatarData {
-  skinTone: string
-  hairStyle: 'short' | 'long' | 'curly' | 'braids' | 'ponytail'
-  hairColor: string
-  eyeStyle: 'round' | 'almond' | 'wide'
-  outfitId: 'red' | 'blue' | 'green' | 'purple' | 'orange' | 'teal'
-  accessoryId: 'none' | 'hat' | 'bow' | 'crown'
+  character: AvatarCharacter
+  displayColor: string  // accent color for name badge / HUD ring
 }
 
 export type RoomId = 'math_mines' | 'story_forest' | 'science_lab' | 'homestead_farm' | 'truth_archive'
@@ -74,12 +82,8 @@ export const HUB_PORTALS: Portal[] = [
 ]
 
 export const DEFAULT_AVATAR: AvatarData = {
-  skinTone: '#F4C89A',
-  hairStyle: 'short',
-  hairColor: '#3D2314',
-  eyeStyle: 'round',
-  outfitId: 'blue',
-  accessoryId: 'none'
+  character: 'girl_young_4',
+  displayColor: '#f59e0b'
 }
 
 export type Track =
