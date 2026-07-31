@@ -17,6 +17,7 @@ export interface StudentProfile {
   xp: number
   ade_coins: number
   trading_enabled: boolean
+  grade_level: string
   created_at: string
 }
 

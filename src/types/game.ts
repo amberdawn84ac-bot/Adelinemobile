@@ -159,3 +159,73 @@ export const SEASON_TIERS: SeasonTier[] = [
   { tier: 9,  xpRequired: 3000, reward: '1000 AdeCoins',       rewardType: 'adecoin',    rewardAmount: 1000 },
   { tier: 10, xpRequired: 4000, reward: 'World Builder Title',  rewardType: 'cosmetic' },
 ]
+
+export type GradeBand = 'K-2' | '3-5' | '6-8' | '9-12'
+
+export interface GradeExpectation {
+  band: GradeBand
+  minCreditsPerYear: number
+  requiredTracks: Track[]
+}
+
+export const GRADE_EXPECTATIONS: GradeExpectation[] = [
+  {
+    band: 'K-2',
+    minCreditsPerYear: 1.0,
+    requiredTracks: ['CREATION_SCIENCE', 'HEALTH_NATUROPATHY', 'HOMESTEADING', 'DISCIPLESHIP', 'ENGLISH_LITERATURE']
+  },
+  {
+    band: '3-5',
+    minCreditsPerYear: 1.5,
+    requiredTracks: ['CREATION_SCIENCE', 'HEALTH_NATUROPATHY', 'HOMESTEADING', 'GOVERNMENT_ECONOMICS',
+      'JUSTICE_CHANGEMAKING', 'DISCIPLESHIP', 'TRUTH_HISTORY', 'ENGLISH_LITERATURE']
+  },
+  {
+    band: '6-8',
+    minCreditsPerYear: 2.0,
+    requiredTracks: ['CREATION_SCIENCE', 'HEALTH_NATUROPATHY', 'HOMESTEADING', 'GOVERNMENT_ECONOMICS',
+      'JUSTICE_CHANGEMAKING', 'DISCIPLESHIP', 'TRUTH_HISTORY', 'ENGLISH_LITERATURE',
+      'APPLIED_MATHEMATICS', 'CREATIVE_ECONOMY']
+  },
+  {
+    band: '9-12',
+    minCreditsPerYear: 3.0,
+    requiredTracks: ['CREATION_SCIENCE', 'HEALTH_NATUROPATHY', 'HOMESTEADING', 'GOVERNMENT_ECONOMICS',
+      'JUSTICE_CHANGEMAKING', 'DISCIPLESHIP', 'TRUTH_HISTORY', 'ENGLISH_LITERATURE',
+      'APPLIED_MATHEMATICS', 'CREATIVE_ECONOMY']
+  }
+]
+
+export const CREDITS_PER_ENTRY = 0.1
+
+export const LIFE_TO_CREDIT: Record<string, Track[]> = {
+  baking:      ['CREATION_SCIENCE', 'APPLIED_MATHEMATICS'],
+  cooking:     ['CREATION_SCIENCE', 'APPLIED_MATHEMATICS', 'HEALTH_NATUROPATHY'],
+  gardening:   ['CREATION_SCIENCE', 'HOMESTEADING'],
+  building:    ['APPLIED_MATHEMATICS', 'CREATIVE_ECONOMY'],
+  woodworking: ['APPLIED_MATHEMATICS', 'CREATIVE_ECONOMY'],
+  sewing:      ['APPLIED_MATHEMATICS', 'CREATIVE_ECONOMY', 'TRUTH_HISTORY'],
+  coding:      ['APPLIED_MATHEMATICS', 'CREATIVE_ECONOMY'],
+  reading:     ['ENGLISH_LITERATURE'],
+  writing:     ['ENGLISH_LITERATURE'],
+  volunteering:['GOVERNMENT_ECONOMICS', 'JUSTICE_CHANGEMAKING'],
+  animals:     ['CREATION_SCIENCE', 'HOMESTEADING', 'DISCIPLESHIP'],
+  soap_making: ['CREATION_SCIENCE', 'CREATIVE_ECONOMY'],
+  debate:      ['ENGLISH_LITERATURE', 'GOVERNMENT_ECONOMICS'],
+}
+
+export interface CreditSummary {
+  track: Track
+  credits: number
+  entriesCount: number
+  meetsYearGoal: boolean
+  creditsNeeded: number
+}
+
+export interface PortfolioEntry {
+  id: string
+  description: string
+  tracks: Track[]
+  credits: number
+  date: string
+}
