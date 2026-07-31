@@ -24,7 +24,7 @@ function distance(ax: number, ay: number, bx: number, by: number) {
 export default function HubWorld({ avatarData, playerName, onEnterRoom, onChatAdeline }: Props) {
   const [player, setPlayer] = useState<PlayerState>({ x: 50, y: 75, facing: 'up' })
   const keysPressed = useRef<Set<string>>(new Set())
-  const animFrame = useRef<number>()
+  const animFrame = useRef<number | undefined>(undefined)
   const playerRef = useRef(player)
   playerRef.current = player
 
