@@ -81,3 +81,81 @@ export const DEFAULT_AVATAR: AvatarData = {
   outfitId: 'blue',
   accessoryId: 'none'
 }
+
+export type Track =
+  | 'CREATION_SCIENCE'
+  | 'HEALTH_NATUROPATHY'
+  | 'HOMESTEADING'
+  | 'GOVERNMENT_ECONOMICS'
+  | 'JUSTICE_CHANGEMAKING'
+  | 'DISCIPLESHIP'
+  | 'TRUTH_HISTORY'
+  | 'ENGLISH_LITERATURE'
+  | 'APPLIED_MATHEMATICS'
+  | 'CREATIVE_ECONOMY'
+
+export const TRACK_LABELS: Record<Track, string> = {
+  CREATION_SCIENCE:     '🔬 Creation Science',
+  HEALTH_NATUROPATHY:   '🌿 Health & Naturopathy',
+  HOMESTEADING:         '🌾 Homesteading',
+  GOVERNMENT_ECONOMICS: '⚖️ Government & Economics',
+  JUSTICE_CHANGEMAKING: '✊ Justice & Changemaking',
+  DISCIPLESHIP:         '✝️ Discipleship',
+  TRUTH_HISTORY:        '📜 Truth & History',
+  ENGLISH_LITERATURE:   '📖 English & Literature',
+  APPLIED_MATHEMATICS:  '⛏️ Applied Mathematics',
+  CREATIVE_ECONOMY:     '🎨 Creative Economy',
+}
+
+export const TRACK_COLORS: Record<Track, string> = {
+  CREATION_SCIENCE:     '#0e7490',
+  HEALTH_NATUROPATHY:   '#16a34a',
+  HOMESTEADING:         '#65a30d',
+  GOVERNMENT_ECONOMICS: '#7c3aed',
+  JUSTICE_CHANGEMAKING: '#dc2626',
+  DISCIPLESHIP:         '#d97706',
+  TRUTH_HISTORY:        '#92400e',
+  ENGLISH_LITERATURE:   '#be185d',
+  APPLIED_MATHEMATICS:  '#1e3a5f',
+  CREATIVE_ECONOMY:     '#c026d3',
+}
+
+export interface LifeMapEntry {
+  id: string
+  student_id: string
+  description: string
+  tracks: Track[]
+  xp_awarded: number
+  coins_awarded: number
+  source: 'chat_log' | 'room_mission' | 'parent_log'
+  created_at: string
+}
+
+export interface StudentMemory {
+  id: string
+  student_id: string
+  key: string
+  value: string
+  updated_at: string
+}
+
+export interface SeasonTier {
+  tier: number
+  xpRequired: number
+  reward: string
+  rewardType: 'adecoin' | 'avatar_item' | 'cosmetic'
+  rewardAmount?: number
+}
+
+export const SEASON_TIERS: SeasonTier[] = [
+  { tier: 1,  xpRequired: 0,    reward: '50 AdeCoins',         rewardType: 'adecoin',    rewardAmount: 50 },
+  { tier: 2,  xpRequired: 100,  reward: 'Red Star Hat',         rewardType: 'avatar_item' },
+  { tier: 3,  xpRequired: 250,  reward: '100 AdeCoins',        rewardType: 'adecoin',    rewardAmount: 100 },
+  { tier: 4,  xpRequired: 500,  reward: 'Golden Crown',         rewardType: 'avatar_item' },
+  { tier: 5,  xpRequired: 800,  reward: '200 AdeCoins',        rewardType: 'adecoin',    rewardAmount: 200 },
+  { tier: 6,  xpRequired: 1200, reward: 'Rainbow Bow',          rewardType: 'avatar_item' },
+  { tier: 7,  xpRequired: 1700, reward: '500 AdeCoins',        rewardType: 'adecoin',    rewardAmount: 500 },
+  { tier: 8,  xpRequired: 2300, reward: "Adeline's Pendant",   rewardType: 'cosmetic' },
+  { tier: 9,  xpRequired: 3000, reward: '1000 AdeCoins',       rewardType: 'adecoin',    rewardAmount: 1000 },
+  { tier: 10, xpRequired: 4000, reward: 'World Builder Title',  rewardType: 'cosmetic' },
+]
