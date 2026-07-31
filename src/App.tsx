@@ -6,6 +6,7 @@ import SignupPage from './pages/SignupPage'
 import CreateChildPage from './pages/CreateChildPage'
 import ChildSelectPage from './pages/ChildSelectPage'
 import GameShell from './pages/GameShell'
+import ParentDashboard from './pages/ParentDashboard'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { session, guestSession, activeChild, isLoading } = useAuth()
@@ -39,6 +40,9 @@ export default function App() {
         } />
         <Route path="/game" element={
           <RequireAuth><GameShell /></RequireAuth>
+        } />
+        <Route path="/parent-dashboard" element={
+          <RequireParent><ParentDashboard /></RequireParent>
         } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
