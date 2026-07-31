@@ -9,6 +9,7 @@ export default function CreateChildPage() {
   const [displayName, setDisplayName] = useState('')
   const [username, setUsername] = useState('')
   const [age, setAge] = useState('')
+  const [gradeBand, setGradeBand] = useState('K-2')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
@@ -22,7 +23,7 @@ export default function CreateChildPage() {
     if (username.length < 3) { setError('Username must be at least 3 characters.'); return }
     setIsLoading(true)
     try {
-      const child = await addChild(displayName.trim(), username, parseInt(age) || 10)
+      const child = await addChild(displayName.trim(), username, parseInt(age) || 10, gradeBand)
       setActiveChild(child)
       navigate('/game')
     } catch (err: any) {
@@ -86,6 +87,20 @@ export default function CreateChildPage() {
               className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
               placeholder="10"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Grade Level</label>
+            <select
+              value={gradeBand}
+              onChange={e => setGradeBand(e.target.value)}
+              className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 bg-white"
+            >
+              <option value="K-2">Kindergarten–2nd Grade</option>
+              <option value="3-5">3rd–5th Grade</option>
+              <option value="6-8">6th–8th Grade</option>
+              <option value="9-12">9th–12th Grade (High School)</option>
+            </select>
           </div>
 
           {error && (

@@ -15,7 +15,7 @@ interface AuthContextType {
   signOut: () => Promise<void>
   startGuestSession: (displayName: string) => void
   setActiveChild: (child: StudentProfile) => void
-  addChild: (displayName: string, username: string, age: number) => Promise<StudentProfile>
+  addChild: (displayName: string, username: string, age: number, gradeBand?: string) => Promise<StudentProfile>
   refreshChildren: () => Promise<void>
 }
 
@@ -115,11 +115,11 @@ export function AuthProvider({ children: reactChildren }: { children: ReactNode 
     localStorage.setItem('adeline_active_child', child.id)
   }
 
-  async function addChild(displayName: string, username: string, age: number): Promise<StudentProfile> {
+  async function addChild(displayName: string, username: string, age: number, gradeBand: string = 'K-2'): Promise<StudentProfile> {
     if (!session) throw new Error('Not authenticated')
     const { data, error } = await supabase
       .from('aw_student_profiles')
-      .insert({ parent_id: session.user.id, display_name: displayName, username, age })
+      .insert({ parent_id: session.user.id, display_name: displayName, username, age, grade_level: gradeBand })
       .select()
       .single()
     if (error) throw error
