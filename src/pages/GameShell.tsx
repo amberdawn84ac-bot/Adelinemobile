@@ -15,10 +15,16 @@ import ScienceLab from '../components/rooms/ScienceLab'
 import HomesteadFarm from '../components/rooms/HomesteadFarm'
 import TruthArchive from '../components/rooms/TruthArchive'
 import { supabase } from '../lib/supabase'
-import { logActivity } from '../lib/lifeMapService'
+import { logActivity, getLifeMap } from '../lib/lifeMapService'
+import MiniWorld from '../components/world/MiniWorld'
+import GraduationTracker from '../components/graduation/GraduationTracker'
+import Portfolio from '../components/portfolio/Portfolio'
+import Transcript from '../components/transcript/Transcript'
+import { gradeBandFromAge, getYearProgress } from '../lib/academicEngine'
+import { GradeBand } from '../types/game'
 
 type GameScreen = 'avatar_builder' | 'chat' | 'hub' | 'room'
-type Overlay = 'life_map' | 'season_pass' | null
+type Overlay = 'life_map' | 'season_pass' | 'graduation' | 'portfolio' | null
 
 const ROOM_CONFIG: Record<RoomId, { label: string; emoji: string; tracks: Track[]; context: string }> = {
   math_mines:     { label: 'Math Mines',      emoji: '⛏️', tracks: ['APPLIED_MATHEMATICS'],                    context: 'Focus on real-world math: farming budgets, measurements, building calculations, market pricing.' },
@@ -53,6 +59,10 @@ export default function GameShell() {
   const [lifeMapEntries, setLifeMapEntries] = useState<LifeMapEntry[]>([])
   const [claimedTiers, setClaimedTiers] = useState<number[]>([])
   const [showRooms, setShowRooms] = useState(false)
+  const [allEntries, setAllEntries] = useState<LifeMapEntry[]>([])
+  const [showTranscript, setShowTranscript] = useState(false)
+  const gradeBand = gradeBandFromAge(activeChild?.age ?? null) as GradeBand
+  const yearProgress = getYearProgress(allEntries, gradeBand)
 
   const playerName = activeChild?.display_name ?? guestSession?.displayName ?? 'Explorer'
   const isGuest = !activeChild && !!guestSession
@@ -61,6 +71,12 @@ export default function GameShell() {
     if (activeChild) {
       supabase.from('aw_season_pass').select('claimed_tiers').eq('student_id', activeChild.id).single()
         .then(({ data }) => { if (data) setClaimedTiers(data.claimed_tiers ?? []) })
+    }
+  }, [activeChild])
+
+  useEffect(() => {
+    if (activeChild) {
+      getLifeMap(activeChild.id).then(setAllEntries)
     }
   }, [activeChild])
 
@@ -93,6 +109,7 @@ export default function GameShell() {
 
   function handleLifeMapEntry(entry: LifeMapEntry) {
     setLifeMapEntries(prev => [entry, ...prev])
+    setAllEntries(prev => [entry, ...prev])
   }
 
   async function handleRoomMissionComplete(description: string, tracks: Track[], xp: number, coins: number) {
@@ -224,6 +241,16 @@ export default function GameShell() {
             <span className="text-slate-300">·</span>
             <span className="text-xs font-bold text-amber-700">🪙 {localCoins}</span>
           </div>
+          <div className="hidden md:flex items-center gap-2 bg-slate-100 rounded-xl px-3 py-1.5">
+            <span className="text-xs text-slate-500">Year</span>
+            <div className="w-16 h-2 bg-slate-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-emerald-500 rounded-full transition-all"
+                style={{ width: `${yearProgress}%` }}
+              />
+            </div>
+            <span className="text-xs font-bold text-emerald-700">{yearProgress}%</span>
+          </div>
 
           <button onClick={() => setOverlay('life_map')}
             className="px-3 py-1.5 text-xs font-semibold bg-violet-100 hover:bg-violet-200 text-violet-700 rounded-xl transition-all">
@@ -232,6 +259,14 @@ export default function GameShell() {
           <button onClick={() => setOverlay('season_pass')}
             className="px-3 py-1.5 text-xs font-semibold bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl transition-all">
             🌟 Pass
+          </button>
+          <button onClick={() => setOverlay('graduation')}
+            className="px-3 py-1.5 text-xs font-semibold bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-xl transition-all">
+            🎓 Path
+          </button>
+          <button onClick={() => setOverlay('portfolio')}
+            className="px-3 py-1.5 text-xs font-semibold bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-xl transition-all">
+            📁 Portfolio
           </button>
           <button onClick={() => setScreen('hub')}
             className="px-3 py-1.5 text-xs font-semibold bg-green-100 hover:bg-green-200 text-green-700 rounded-xl transition-all">
@@ -260,34 +295,46 @@ export default function GameShell() {
           />
         </div>
 
-        {/* Room sidebar — desktop */}
-        <div className="hidden lg:flex flex-col w-56 bg-white border-l border-amber-100 p-3 gap-2 overflow-y-auto shrink-0">
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider px-1 mb-1">Enter a Room</p>
-          {(Object.entries(ROOM_CONFIG) as [RoomId, typeof ROOM_CONFIG[RoomId]][]).map(([id, cfg]) => (
-            <div key={id} className="rounded-xl border border-slate-100 overflow-hidden">
+        {/* Right panel — desktop: mini world + rooms */}
+        <div className="hidden lg:flex flex-col w-64 bg-white border-l border-amber-100 shrink-0">
+          {/* Mini world with avatar */}
+          <div className="h-52 p-2 border-b border-amber-100">
+            <MiniWorld
+              avatarData={avatarData}
+              playerName={playerName}
+              onEnterRoom={(id) => enterRoom(id, 'mission')}
+            />
+          </div>
+
+          {/* Room list */}
+          <div className="flex-1 overflow-y-auto p-3 gap-2 flex flex-col">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider px-1 mb-1">Enter a Room</p>
+            {(Object.entries(ROOM_CONFIG) as [RoomId, typeof ROOM_CONFIG[RoomId]][]).map(([id, cfg]) => (
+              <div key={id} className="rounded-xl border border-slate-100 overflow-hidden">
+                <button
+                  onClick={() => enterRoom(id, 'mission')}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-amber-50 transition-all text-left"
+                >
+                  <span className="text-xl">{cfg.emoji}</span>
+                  <span className="text-sm font-semibold text-slate-700">{cfg.label}</span>
+                </button>
+                <button
+                  onClick={() => enterRoom(id, 'quiz')}
+                  className="w-full px-3 py-1.5 text-xs text-slate-400 hover:text-slate-600 hover:bg-slate-50 border-t border-slate-100 transition-all text-left"
+                >
+                  Quick quiz →
+                </button>
+              </div>
+            ))}
+
+            <div className="mt-auto pt-2 border-t border-slate-100">
               <button
-                onClick={() => enterRoom(id, 'mission')}
-                className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-amber-50 transition-all text-left"
+                onClick={handleSignOut}
+                className="w-full text-xs text-slate-400 hover:text-slate-600 py-2 rounded-lg hover:bg-slate-50 transition-all"
               >
-                <span className="text-xl">{cfg.emoji}</span>
-                <span className="text-sm font-semibold text-slate-700">{cfg.label}</span>
-              </button>
-              <button
-                onClick={() => enterRoom(id, 'quiz')}
-                className="w-full px-3 py-1.5 text-xs text-slate-400 hover:text-slate-600 hover:bg-slate-50 border-t border-slate-100 transition-all text-left"
-              >
-                Quick quiz →
+                {isGuest ? 'Leave Game' : 'Sign Out'}
               </button>
             </div>
-          ))}
-
-          <div className="mt-2 pt-2 border-t border-slate-100">
-            <button
-              onClick={handleSignOut}
-              className="w-full text-xs text-slate-400 hover:text-slate-600 py-2 rounded-lg hover:bg-slate-50 transition-all"
-            >
-              {isGuest ? 'Leave Game' : 'Sign Out'}
-            </button>
           </div>
         </div>
       </div>
@@ -338,6 +385,32 @@ export default function GameShell() {
           claimedTiers={claimedTiers}
           onClaimTier={claimSeasonTier}
           onClose={() => setOverlay(null)}
+        />
+      )}
+      {overlay === 'graduation' && (
+        <GraduationTracker
+          entries={allEntries}
+          gradeBand={gradeBand}
+          studentName={playerName}
+          onClose={() => setOverlay(null)}
+        />
+      )}
+      {overlay === 'portfolio' && (
+        <Portfolio
+          entries={allEntries}
+          studentName={playerName}
+          gradeBand={gradeBand}
+          onClose={() => setOverlay(null)}
+          onExport={() => { setOverlay(null); setShowTranscript(true) }}
+        />
+      )}
+      {showTranscript && (
+        <Transcript
+          entries={allEntries}
+          studentName={playerName}
+          gradeBand={gradeBand}
+          parentName={parentAccount?.display_name ?? 'Parent'}
+          onClose={() => setShowTranscript(false)}
         />
       )}
     </div>
