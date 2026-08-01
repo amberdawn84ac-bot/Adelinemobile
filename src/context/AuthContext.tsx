@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { ParentAccount, StudentProfile, GuestSession } from '../types/auth'
+import { registerStudent } from '../lib/brainClient'
+import { GRADE_EXPECTATIONS } from '../types/game'
 
 interface AuthContextType {
   session: Session | null
@@ -123,6 +125,24 @@ export function AuthProvider({ children: reactChildren }: { children: ReactNode 
       .select()
       .single()
     if (error) throw error
+
+    // Register in brain non-blocking — failure is retried next room entry via registered_in_brain flag
+    const expectation = GRADE_EXPECTATIONS.find(g => g.band === gradeBand) ?? GRADE_EXPECTATIONS[0]
+    registerStudent({
+      student_id: data.id,
+      name: displayName,
+      grade_level: gradeBand,
+      is_homestead: true,
+      tracks: expectation.requiredTracks,
+    }).then(success => {
+      if (success) {
+        supabase.from('aw_student_profiles')
+          .update({ registered_in_brain: true })
+          .eq('id', data.id)
+          .then(() => {})
+      }
+    })
+
     await refreshChildren()
     return data
   }
