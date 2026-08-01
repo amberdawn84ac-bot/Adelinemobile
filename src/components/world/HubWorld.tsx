@@ -114,7 +114,7 @@ export default function HubWorld({ avatarData, playerName, studentId, currentXP,
         const p = playerRef.current
         for (const portal of HUB_PORTALS) {
           if (distance(p.x, p.y, portal.x, portal.y) < PORTAL_PROXIMITY) {
-            onEnterRoom(portal.id)
+            if (!portal.locked) onEnterRoom(portal.id)
             return
           }
         }
