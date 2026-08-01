@@ -179,6 +179,8 @@ export default function GameShell() {
               roomTracks={config.tracks}
               playerName={playerName}
               systemContext={config.context}
+              studentId={activeChild?.id ?? null}
+              gradeBand={gradeBand}
               onComplete={handleRoomMissionComplete}
               onBack={() => { setCurrentRoom(null); setScreen('hub') }}
             />
