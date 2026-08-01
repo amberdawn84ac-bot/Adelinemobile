@@ -18,6 +18,7 @@ export interface StudentProfile {
   ade_coins: number
   trading_enabled: boolean
   grade_level: string
+  registered_in_brain: boolean
   created_at: string
 }
 
