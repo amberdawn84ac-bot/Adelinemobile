@@ -30,6 +30,12 @@ const ROOM_CONFIG: Record<RoomId, { label: string; emoji: string; tracks: Track[
   science_lab:    { label: 'Science Lab',     emoji: '🔬', tracks: ['CREATION_SCIENCE'],                       context: 'Focus on creation science, nature observation, household experiments, animal biology.' },
   homestead_farm: { label: 'Homestead Farm',  emoji: '🌾', tracks: ['HOMESTEADING', 'APPLIED_MATHEMATICS'],    context: 'Focus on farming, animal husbandry, canning, building, selling at market, off-grid living.' },
   truth_archive:  { label: 'Truth Archive',   emoji: '📜', tracks: ['TRUTH_HISTORY', 'JUSTICE_CHANGEMAKING'], context: 'Focus on primary source history, follow the money, who profits, real unfiltered events.' },
+  // Locked portals (not yet implemented - stub entries):
+  health_grove:   { label: 'Health Grove',    emoji: '🌿', tracks: ['HEALTH_NATUROPATHY'],                    context: 'Natural medicine and the body God designed' },
+  the_council:    { label: 'The Council',     emoji: '⚖️', tracks: ['GOVERNMENT_ECONOMICS'],                  context: 'Civics, economics, and who really pulls the levers' },
+  justice_quarter: { label: 'Justice Quarter', emoji: '✊', tracks: ['JUSTICE_CHANGEMAKING'],                  context: 'Power, resistance, and the changemaker response' },
+  the_chapel:     { label: 'The Chapel',      emoji: '✝️', tracks: ['DISCIPLESHIP'],                           context: 'Faith, character, and reading the world through Scripture' },
+  makers_market:  { label: "Maker's Market",  emoji: '🎨', tracks: ['CREATIVE_ECONOMY'],                      context: 'Making, crafting, and selling as real scholarship' },
 }
 
 function parseAvatar(data: Record<string, unknown>): AvatarData | null {

@@ -16,6 +16,12 @@ const DOOR_POSITIONS: Record<RoomId, { x: number; y: number }> = {
   science_lab:    { x: 50, y: 18 },
   homestead_farm: { x: 15, y: 62 },
   truth_archive:  { x: 85, y: 62 },
+  // Locked portals (not entered):
+  health_grove:   { x: 35, y: 18 },
+  the_council:    { x: 65, y: 18 },
+  justice_quarter: { x: 10, y: 50 },
+  the_chapel:     { x: 90, y: 50 },
+  makers_market:  { x: 50, y: 88 },
 }
 
 const WALK_DURATION_MS = 600

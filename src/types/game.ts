@@ -15,7 +15,9 @@ export interface AvatarData {
   displayColor: string  // accent color for name badge / HUD ring
 }
 
-export type RoomId = 'math_mines' | 'story_forest' | 'science_lab' | 'homestead_farm' | 'truth_archive'
+export type RoomId =
+  | 'math_mines' | 'story_forest' | 'science_lab' | 'homestead_farm' | 'truth_archive'
+  | 'health_grove' | 'the_council' | 'justice_quarter' | 'the_chapel' | 'makers_market'
 
 export interface PlayerState {
   x: number
@@ -31,6 +33,7 @@ export interface Portal {
   y: number
   color: string
   emoji: string
+  locked?: boolean
 }
 
 export const HUB_PORTALS: Portal[] = [
@@ -78,6 +81,56 @@ export const HUB_PORTALS: Portal[] = [
     y: 65,
     color: '#92400e',
     emoji: '📜'
+  },
+  {
+    id: 'health_grove',
+    label: 'Health Grove',
+    description: 'Natural medicine and the body God designed',
+    x: 35,
+    y: 18,
+    color: '#16a34a',
+    emoji: '🌿',
+    locked: true,
+  },
+  {
+    id: 'the_council',
+    label: 'The Council',
+    description: 'Civics, economics, and who really pulls the levers',
+    x: 65,
+    y: 18,
+    color: '#7c3aed',
+    emoji: '⚖️',
+    locked: true,
+  },
+  {
+    id: 'justice_quarter',
+    label: 'Justice Quarter',
+    description: 'Power, resistance, and the changemaker response',
+    x: 10,
+    y: 50,
+    color: '#dc2626',
+    emoji: '✊',
+    locked: true,
+  },
+  {
+    id: 'the_chapel',
+    label: 'The Chapel',
+    description: 'Faith, character, and reading the world through Scripture',
+    x: 90,
+    y: 50,
+    color: '#d97706',
+    emoji: '✝️',
+    locked: true,
+  },
+  {
+    id: 'makers_market',
+    label: "Maker's Market",
+    description: 'Making, crafting, and selling as real scholarship',
+    x: 50,
+    y: 88,
+    color: '#c026d3',
+    emoji: '🎨',
+    locked: true,
   },
 ]
 
