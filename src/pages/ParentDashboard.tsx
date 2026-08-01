@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { LifeMapEntry, TRACK_LABELS, TRACK_COLORS, Track } from '../types/game'
 import { ArrowLeft, Users, BookOpen, Clock, Star } from 'lucide-react'
+import { getTranscript, BrainTranscriptEntry } from '../lib/brainClient'
 
 interface ChildStats {
   childId: string
@@ -24,6 +25,8 @@ export default function ParentDashboard() {
   const [loading, setLoading] = useState(true)
   const [selectedChild, setSelectedChild] = useState<ChildStats | null>(null)
   const [approvingId, setApprovingId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'activity' | 'transcript'>('activity')
+  const [transcripts, setTranscripts] = useState<Record<string, BrainTranscriptEntry[]>>({})
 
   useEffect(() => {
     if (children.length > 0) loadStats()
@@ -74,6 +77,12 @@ export default function ParentDashboard() {
     await supabase.from('aw_student_profiles').update({ avatar_approved: true }).eq('id', childId)
     await loadStats()
     setApprovingId(null)
+  }
+
+  async function loadTranscript(childId: string) {
+    if (transcripts[childId] !== undefined) return  // already loaded
+    const entries = await getTranscript(childId)
+    setTranscripts(prev => ({ ...prev, [childId]: entries }))
   }
 
   const pendingApprovals = stats.filter(s => !s.usernameApproved || !s.avatarApproved)
@@ -171,31 +180,71 @@ export default function ParentDashboard() {
                     )}
                   </div>
 
-                  {selectedChild?.childId === s.childId && s.recentEntries.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-slate-100 space-y-2" onClick={e => e.stopPropagation()}>
-                      <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">Recent Activity</p>
-                      {s.recentEntries.map(entry => (
-                        <div key={entry.id} className="bg-slate-50 rounded-xl p-3">
-                          <p className="text-slate-700 text-sm">{entry.description}</p>
-                          <div className="flex items-center justify-between mt-1">
-                            <div className="flex flex-wrap gap-1">
-                              {entry.tracks.map(t => (
-                                <span
-                                  key={t}
-                                  className="text-[10px] px-1.5 py-0.5 rounded-full text-white"
-                                  style={{ backgroundColor: TRACK_COLORS[t as Track] }}
-                                >
-                                  {TRACK_LABELS[t as Track]}
+                  {selectedChild?.childId === s.childId && (
+                    <div className="mt-3 pt-3 border-t border-slate-100" onClick={e => e.stopPropagation()}>
+                      {/* Tab bar */}
+                      <div className="flex gap-2 mb-3">
+                        <button
+                          onClick={() => setActiveTab('activity')}
+                          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === 'activity' ? 'bg-amber-100 text-amber-800' : 'text-slate-400 hover:text-slate-600'}`}
+                        >
+                          Activity Log
+                        </button>
+                        <button
+                          onClick={() => { setActiveTab('transcript'); loadTranscript(s.childId) }}
+                          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === 'transcript' ? 'bg-emerald-100 text-emerald-800' : 'text-slate-400 hover:text-slate-600'}`}
+                        >
+                          Transcript
+                        </button>
+                      </div>
+
+                      {activeTab === 'activity' && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Recent Activity</p>
+                          {s.recentEntries.map(entry => (
+                            <div key={entry.id} className="bg-slate-50 rounded-xl p-3">
+                              <p className="text-slate-700 text-sm">{entry.description}</p>
+                              <div className="flex items-center justify-between mt-1">
+                                <div className="flex flex-wrap gap-1">
+                                  {entry.tracks.map(t => (
+                                    <span key={t} className="text-[10px] px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: TRACK_COLORS[t as Track] }}>
+                                      {TRACK_LABELS[t as Track]}
+                                    </span>
+                                  ))}
+                                </div>
+                                <span className="text-slate-400 text-xs flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {new Date(entry.created_at).toLocaleDateString()}
                                 </span>
-                              ))}
+                              </div>
                             </div>
-                            <span className="text-slate-400 text-xs flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {new Date(entry.created_at).toLocaleDateString()}
-                            </span>
-                          </div>
+                          ))}
+                          {s.recentEntries.length === 0 && <p className="text-slate-400 text-xs">No activity yet.</p>}
                         </div>
-                      ))}
+                      )}
+
+                      {activeTab === 'transcript' && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">CASE Transcript Credits</p>
+                          {transcripts[s.childId] === undefined ? (
+                            <p className="text-slate-400 text-xs">Loading...</p>
+                          ) : transcripts[s.childId].length === 0 ? (
+                            <p className="text-slate-400 text-xs">No verified credits yet. Complete room missions to earn transcript credits.</p>
+                          ) : (
+                            transcripts[s.childId].map(entry => (
+                              <div key={entry.id} className="bg-slate-50 rounded-xl p-3">
+                                <p className="text-slate-700 text-sm font-semibold">{entry.title ?? 'Lesson'}</p>
+                                <div className="flex items-center justify-between mt-1">
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full text-white bg-emerald-600">
+                                    {TRACK_LABELS[entry.track as Track] ?? entry.track}
+                                  </span>
+                                  <span className="text-emerald-700 text-xs font-bold">{entry.credits} cr</span>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </button>
