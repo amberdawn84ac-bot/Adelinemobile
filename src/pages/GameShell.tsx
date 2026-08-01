@@ -1,10 +1,9 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { AvatarData, RoomId, DEFAULT_AVATAR, LifeMapEntry, SEASON_TIERS, Track } from '../types/game'
+import { AvatarData, RoomId, DEFAULT_AVATAR, LifeMapEntry, Track } from '../types/game'
 import AvatarBuilder from '../components/avatar/AvatarBuilder'
 import GameHUD from '../components/hud/GameHUD'
-import AdelineChat from '../components/chat/AdelineChat'
 import HubWorld from '../components/world/HubWorld'
 import LifeMap from '../components/life-map/LifeMap'
 import SeasonPass from '../components/season-pass/SeasonPass'
@@ -16,14 +15,13 @@ import HomesteadFarm from '../components/rooms/HomesteadFarm'
 import TruthArchive from '../components/rooms/TruthArchive'
 import { supabase } from '../lib/supabase'
 import { logActivity, getLifeMap } from '../lib/lifeMapService'
-import MiniWorld from '../components/world/MiniWorld'
 import GraduationTracker from '../components/graduation/GraduationTracker'
 import Portfolio from '../components/portfolio/Portfolio'
 import Transcript from '../components/transcript/Transcript'
-import { gradeBandFromAge, getYearProgress } from '../lib/academicEngine'
+import { gradeBandFromAge } from '../lib/academicEngine'
 import { GradeBand } from '../types/game'
 
-type GameScreen = 'avatar_builder' | 'chat' | 'hub' | 'room'
+type GameScreen = 'avatar_builder' | 'hub' | 'room'
 type Overlay = 'life_map' | 'season_pass' | 'graduation' | 'portfolio' | null
 
 const ROOM_CONFIG: Record<RoomId, { label: string; emoji: string; tracks: Track[]; context: string }> = {
@@ -49,7 +47,7 @@ export default function GameShell() {
     ? parseAvatar(guestAvatarRaw as Record<string, unknown>) : null
   const hasAvatar = storedAvatar !== null || guestAvatar !== null
 
-  const [screen, setScreen] = useState<GameScreen>(hasAvatar ? 'chat' : 'avatar_builder')
+  const [screen, setScreen] = useState<GameScreen>(hasAvatar ? 'hub' : 'avatar_builder')
   const [avatarData, setAvatarData] = useState<AvatarData>(storedAvatar ?? guestAvatar ?? DEFAULT_AVATAR)
   const [currentRoom, setCurrentRoom] = useState<RoomId | null>(null)
   const [roomMode, setRoomMode] = useState<'quiz' | 'mission'>('mission')
@@ -58,14 +56,11 @@ export default function GameShell() {
   const [overlay, setOverlay] = useState<Overlay>(null)
   const [lifeMapEntries, setLifeMapEntries] = useState<LifeMapEntry[]>([])
   const [claimedTiers, setClaimedTiers] = useState<number[]>([])
-  const [showRooms, setShowRooms] = useState(false)
   const [allEntries, setAllEntries] = useState<LifeMapEntry[]>([])
   const [showTranscript, setShowTranscript] = useState(false)
   const gradeBand = gradeBandFromAge(activeChild?.age ?? null) as GradeBand
-  const yearProgress = getYearProgress(allEntries, gradeBand)
 
   const playerName = activeChild?.display_name ?? guestSession?.displayName ?? 'Explorer'
-  const isGuest = !activeChild && !!guestSession
 
   useEffect(() => {
     if (activeChild) {
@@ -88,7 +83,7 @@ export default function GameShell() {
     } else if (guestSession) {
       localStorage.setItem('adeline_guest', JSON.stringify({ ...guestSession, avatarData: avatar }))
     }
-    setScreen('chat')
+    setScreen('hub')
   }
 
   async function addXP(amount: number) {
@@ -135,7 +130,6 @@ export default function GameShell() {
     setCurrentRoom(roomId)
     setRoomMode(mode)
     setScreen('room')
-    setShowRooms(false)
   }, [])
 
   async function handleSignOut() {
@@ -167,7 +161,7 @@ export default function GameShell() {
           guestSession={hudGuest}
           avatarData={avatarData}
           roomLabel={`${config.emoji} ${config.label}`}
-          onExitRoom={() => { setCurrentRoom(null); setScreen('chat') }}
+          onExitRoom={() => { setCurrentRoom(null); setScreen('hub') }}
           onSignOut={handleSignOut}
         />
         <div className="w-full h-full pt-16">
@@ -180,7 +174,7 @@ export default function GameShell() {
               playerName={playerName}
               systemContext={config.context}
               onComplete={handleRoomMissionComplete}
-              onBack={() => { setCurrentRoom(null); setScreen('chat') }}
+              onBack={() => { setCurrentRoom(null); setScreen('hub') }}
             />
           ) : (
             <>
@@ -196,181 +190,52 @@ export default function GameShell() {
     )
   }
 
-  // ── Hub World (2D exploration) ──
-  if (screen === 'hub') {
-    return (
-      <div className="w-screen h-screen overflow-hidden relative">
-        <GameHUD
-          player={hudPlayer}
-          guestSession={hudGuest}
-          avatarData={avatarData}
-          onExitRoom={() => setScreen('chat')}
-          onSignOut={handleSignOut}
-        />
-        <div className="w-full h-full pt-16">
-          <HubWorld
-            avatarData={avatarData}
-            playerName={playerName}
-            onEnterRoom={(id) => enterRoom(id, 'mission')}
-            onChatAdeline={() => setScreen('chat')}
-          />
-        </div>
-      </div>
-    )
-  }
-
-  // ── Main Chat Screen ──
+  // ── Hub World (2D exploration) — the main game screen ──
   return (
-    <div className="w-screen h-screen overflow-hidden flex flex-col bg-amber-50/30">
-      {/* Top bar */}
-      <div className="h-14 bg-white border-b border-amber-100 flex items-center justify-between px-4 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-amber-400">
-            <img src="/adeline_portrait.png" alt="Adeline" className="w-full h-full object-cover"
-              onError={e => { e.currentTarget.style.display = 'none' }} />
-          </div>
-          <div>
-            <p className="font-bold text-slate-800 text-sm">Adeline</p>
-            <p className="text-xs text-amber-600">Learning Guide</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="hidden sm:flex items-center gap-3 bg-slate-100 rounded-xl px-3 py-1.5">
-            <span className="text-xs font-bold text-amber-700">{localXP} XP</span>
-            <span className="text-slate-300">·</span>
-            <span className="text-xs font-bold text-amber-700">🪙 {localCoins}</span>
-          </div>
-          <div className="hidden md:flex items-center gap-2 bg-slate-100 rounded-xl px-3 py-1.5">
-            <span className="text-xs text-slate-500">Year</span>
-            <div className="w-16 h-2 bg-slate-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-emerald-500 rounded-full transition-all"
-                style={{ width: `${yearProgress}%` }}
-              />
-            </div>
-            <span className="text-xs font-bold text-emerald-700">{yearProgress}%</span>
-          </div>
-
-          <button onClick={() => setOverlay('life_map')}
-            className="px-3 py-1.5 text-xs font-semibold bg-violet-100 hover:bg-violet-200 text-violet-700 rounded-xl transition-all">
-            🗺️ Life Map
-          </button>
-          <button onClick={() => setOverlay('season_pass')}
-            className="px-3 py-1.5 text-xs font-semibold bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl transition-all">
-            🌟 Pass
-          </button>
-          <button onClick={() => setOverlay('graduation')}
-            className="px-3 py-1.5 text-xs font-semibold bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-xl transition-all">
-            🎓 Path
-          </button>
-          <button onClick={() => setOverlay('portfolio')}
-            className="px-3 py-1.5 text-xs font-semibold bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-xl transition-all">
-            📁 Portfolio
-          </button>
-          <button onClick={() => setScreen('hub')}
-            className="px-3 py-1.5 text-xs font-semibold bg-green-100 hover:bg-green-200 text-green-700 rounded-xl transition-all">
-            🏘️ Hub
-          </button>
-          {parentAccount && (
-            <button onClick={() => navigate('/parent-dashboard')}
-              className="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-all">
-              👪
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Main content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Chat */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <AdelineChat
-            studentId={activeChild?.id ?? null}
-            playerName={playerName}
-            currentXP={localXP}
-            onXpEarned={addXP}
-            onCoinsEarned={addCoins}
-            onLifeMapEntry={handleLifeMapEntry}
-          />
-        </div>
-
-        {/* Right panel — desktop: mini world + rooms */}
-        <div className="hidden lg:flex flex-col w-64 bg-white border-l border-amber-100 shrink-0">
-          {/* Mini world with avatar */}
-          <div className="h-52 p-2 border-b border-amber-100">
-            <MiniWorld
-              avatarData={avatarData}
-              playerName={playerName}
-              onEnterRoom={(id) => enterRoom(id, 'mission')}
-            />
-          </div>
-
-          {/* Room list */}
-          <div className="flex-1 overflow-y-auto p-3 gap-2 flex flex-col">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider px-1 mb-1">Enter a Room</p>
-            {(Object.entries(ROOM_CONFIG) as [RoomId, typeof ROOM_CONFIG[RoomId]][]).map(([id, cfg]) => (
-              <div key={id} className="rounded-xl border border-slate-100 overflow-hidden">
-                <button
-                  onClick={() => enterRoom(id, 'mission')}
-                  className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-amber-50 transition-all text-left"
-                >
-                  <span className="text-xl">{cfg.emoji}</span>
-                  <span className="text-sm font-semibold text-slate-700">{cfg.label}</span>
-                </button>
-                <button
-                  onClick={() => enterRoom(id, 'quiz')}
-                  className="w-full px-3 py-1.5 text-xs text-slate-400 hover:text-slate-600 hover:bg-slate-50 border-t border-slate-100 transition-all text-left"
-                >
-                  Quick quiz →
-                </button>
-              </div>
-            ))}
-
-            <div className="mt-auto pt-2 border-t border-slate-100">
-              <button
-                onClick={handleSignOut}
-                className="w-full text-xs text-slate-400 hover:text-slate-600 py-2 rounded-lg hover:bg-slate-50 transition-all"
-              >
-                {isGuest ? 'Leave Game' : 'Sign Out'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile room launcher */}
-      <div className="lg:hidden fixed bottom-20 right-4 z-30">
-        <button
-          onClick={() => setShowRooms(!showRooms)}
-          className="w-14 h-14 bg-amber-500 hover:bg-amber-400 text-white rounded-full shadow-xl text-2xl flex items-center justify-center transition-all"
-        >
-          {showRooms ? '✕' : '🏫'}
+    <div className="w-screen h-screen overflow-hidden relative">
+      <GameHUD
+        player={hudPlayer}
+        guestSession={hudGuest}
+        avatarData={avatarData}
+        onSignOut={handleSignOut}
+      />
+      {/* Overlay launcher buttons */}
+      <div className="fixed top-16 right-3 z-40 flex flex-col gap-1.5 pointer-events-auto">
+        <button onClick={() => setOverlay('life_map')}
+          className="bg-violet-600/90 hover:bg-violet-500 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-xl shadow backdrop-blur transition-all">
+          🗺️ Life Map
         </button>
+        <button onClick={() => setOverlay('season_pass')}
+          className="bg-amber-600/90 hover:bg-amber-500 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-xl shadow backdrop-blur transition-all">
+          🌟 Pass
+        </button>
+        <button onClick={() => setOverlay('graduation')}
+          className="bg-emerald-600/90 hover:bg-emerald-500 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-xl shadow backdrop-blur transition-all">
+          🎓 Path
+        </button>
+        <button onClick={() => setOverlay('portfolio')}
+          className="bg-blue-600/90 hover:bg-blue-500 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-xl shadow backdrop-blur transition-all">
+          📁 Portfolio
+        </button>
+        {parentAccount && (
+          <button onClick={() => navigate('/parent-dashboard')}
+            className="bg-slate-600/90 hover:bg-slate-500 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-xl shadow backdrop-blur transition-all">
+            👪 Parent
+          </button>
+        )}
       </div>
-
-      {showRooms && (
-        <div className="lg:hidden fixed bottom-36 right-4 z-30 bg-white rounded-2xl shadow-xl border border-amber-100 p-3 w-52 space-y-1">
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider px-1 mb-2">Enter a Room</p>
-          {(Object.entries(ROOM_CONFIG) as [RoomId, typeof ROOM_CONFIG[RoomId]][]).map(([id, cfg]) => (
-            <button
-              key={id}
-              onClick={() => enterRoom(id, 'mission')}
-              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-amber-50 rounded-xl transition-all text-left"
-            >
-              <span className="text-xl">{cfg.emoji}</span>
-              <span className="text-sm font-semibold text-slate-700">{cfg.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {isGuest && (
-        <div className="lg:hidden fixed bottom-4 left-4 right-20 bg-amber-500 text-white text-xs font-semibold px-4 py-2 rounded-2xl shadow-lg">
-          💾 Guest — progress not saved.{' '}
-          <button onClick={handleSignOut} className="underline">Create account</button>
-        </div>
-      )}
+      <div className="w-full h-full pt-16">
+        <HubWorld
+          avatarData={avatarData}
+          playerName={playerName}
+          studentId={activeChild?.id ?? null}
+          currentXP={localXP}
+          onEnterRoom={(id) => enterRoom(id, 'mission')}
+          onXpEarned={addXP}
+          onCoinsEarned={addCoins}
+          onLifeMapEntry={handleLifeMapEntry}
+        />
+      </div>
 
       {overlay === 'life_map' && (
         <LifeMap
