@@ -11,6 +11,67 @@ async function startServer() {
   app.use(cors());
   app.use(express.json());
 
+  // Brain proxy — forwards /api/brain/* to Railway adeline-brain
+  // BRAIN_URL is server-side only, never exposed to the client
+  app.use('/api/brain', async (req: any, res: any) => {
+    const brainUrl = process.env.BRAIN_URL
+    if (!brainUrl) {
+      return res.status(503).json({ error: 'Brain service not configured' })
+    }
+
+    const targetPath = req.path
+    const queryString = req.url.includes('?') ? '?' + req.url.split('?').slice(1).join('?') : ''
+    const targetUrl = `${brainUrl}${targetPath}${queryString}`
+    const method = req.method
+
+    try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 8000)
+
+      const fetchOptions: RequestInit = {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(req.headers.authorization ? { 'Authorization': req.headers.authorization } : {}),
+        },
+        signal: controller.signal,
+      }
+
+      if (method !== 'GET' && method !== 'HEAD' && req.body && Object.keys(req.body).length > 0) {
+        (fetchOptions as any).body = JSON.stringify(req.body)
+      }
+
+      const brainRes = await fetch(targetUrl, fetchOptions)
+      clearTimeout(timeout)
+
+      const contentType = brainRes.headers.get('content-type') ?? ''
+      if (contentType.includes('text/event-stream')) {
+        res.setHeader('Content-Type', 'text/event-stream')
+        res.setHeader('Cache-Control', 'no-cache')
+        res.setHeader('Connection', 'keep-alive')
+        const reader = (brainRes.body as any)?.getReader()
+        if (!reader) return res.end()
+        const pump = async () => {
+          const { done, value } = await reader.read()
+          if (done) { res.end(); return }
+          res.write(value)
+          pump()
+        }
+        pump()
+      } else {
+        const data = await brainRes.text()
+        res.status(brainRes.status).send(data)
+      }
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        res.status(504).json({ error: 'Brain timeout' })
+      } else {
+        console.error('Brain proxy error:', err.message)
+        res.status(502).json({ error: 'Brain unreachable' })
+      }
+    }
+  })
+
   // Server-side Gemini API endpoint
   app.post("/api/chat", async (req, res) => {
     try {
