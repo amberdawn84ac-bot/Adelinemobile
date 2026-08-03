@@ -139,6 +139,196 @@ export const DEFAULT_AVATAR: AvatarData = {
   displayColor: '#f59e0b'
 }
 
+export type ActivityType = 'story_mode' | 'quiz_me' | 'build_it' | 'explore' | 'mini_game'
+
+export type BuildingId =
+  | 'adelines_kitchen'
+  | 'the_library'
+  | 'the_arena'
+  | 'the_makers_lab'
+  | 'the_creek_and_woods'
+  | 'the_market'
+  | 'the_chapel'
+
+export interface FallbackMission {
+  title: string
+  description: string
+  prompt: string
+  tracks: Track[]
+  xpReward: number
+  coinReward: number
+}
+
+export interface TownBuilding {
+  id: BuildingId
+  name: string
+  emoji: string
+  color: string
+  position: { x: number; y: number }
+  activityTypes: ActivityType[]
+  unlockXP: number          // 0 = always open
+  description: string
+  fallbackMissions: FallbackMission[]
+}
+
+export const TOWN_BUILDINGS: TownBuilding[] = [
+  {
+    id: 'adelines_kitchen',
+    name: "Adeline's Kitchen",
+    emoji: '🏡',
+    color: '#d97706',
+    position: { x: 50, y: 52 },
+    activityTypes: [],
+    unlockXP: 0,
+    description: 'Come talk to Adeline. She always has an idea.',
+    fallbackMissions: [],
+  },
+  {
+    id: 'the_library',
+    name: 'The Library',
+    emoji: '📚',
+    color: '#be185d',
+    position: { x: 22, y: 35 },
+    activityTypes: ['story_mode', 'explore'],
+    unlockXP: 0,
+    description: 'Stories, deep dives, and rabbit holes worth falling into.',
+    fallbackMissions: [
+      {
+        title: 'Tell Your Story',
+        description: 'Write about something real that happened to you this week.',
+        prompt: 'Describe the event, how it made you feel, and what you learned.',
+        tracks: ['ENGLISH_LITERATURE'],
+        xpReward: 60,
+        coinReward: 15,
+      },
+      {
+        title: 'Follow the Money',
+        description: 'Pick any historical event and ask: who profited?',
+        prompt: 'Name the event, identify who benefited most, and explain with evidence.',
+        tracks: ['TRUTH_HISTORY'],
+        xpReward: 70,
+        coinReward: 18,
+      },
+    ],
+  },
+  {
+    id: 'the_arena',
+    name: 'The Arena',
+    emoji: '⚔️',
+    color: '#dc2626',
+    position: { x: 75, y: 35 },
+    activityTypes: ['quiz_me', 'mini_game'],
+    unlockXP: 0,
+    description: 'Test your knowledge. Earn your rank.',
+    fallbackMissions: [
+      {
+        title: 'Quick Fire Round',
+        description: 'Answer 5 questions on any topic you have been studying.',
+        prompt: 'Write each question and your answer. Explain your reasoning for each.',
+        tracks: ['APPLIED_MATHEMATICS', 'CREATION_SCIENCE'],
+        xpReward: 50,
+        coinReward: 12,
+      },
+    ],
+  },
+  {
+    id: 'the_makers_lab',
+    name: "The Maker's Lab",
+    emoji: '🔧',
+    color: '#0e7490',
+    position: { x: 28, y: 65 },
+    activityTypes: ['build_it', 'explore'],
+    unlockXP: 0,
+    description: 'Build it. Break it. Figure out why. Build it better.',
+    fallbackMissions: [
+      {
+        title: 'Kitchen Science Observation',
+        description: 'Pick something in your kitchen and figure out the science behind it.',
+        prompt: 'What did you observe? What question does it raise? What would you test?',
+        tracks: ['CREATION_SCIENCE', 'APPLIED_MATHEMATICS'],
+        xpReward: 65,
+        coinReward: 16,
+      },
+      {
+        title: 'Budget Your Build',
+        description: 'Plan a real or imaginary building project with a budget.',
+        prompt: 'List materials, estimate costs, and calculate the total. What would you cut if over budget?',
+        tracks: ['APPLIED_MATHEMATICS', 'CREATIVE_ECONOMY'],
+        xpReward: 70,
+        coinReward: 18,
+      },
+    ],
+  },
+  {
+    id: 'the_creek_and_woods',
+    name: 'The Creek & Woods',
+    emoji: '🌿',
+    color: '#16a34a',
+    position: { x: 72, y: 65 },
+    activityTypes: ['explore', 'build_it'],
+    unlockXP: 0,
+    description: 'Adeline used to bring us here for scavenger hunts and adventures.',
+    fallbackMissions: [
+      {
+        title: 'Nature Observation Log',
+        description: 'Go outside or look out a window and observe something alive.',
+        prompt: 'Describe what you saw, heard, or noticed. What questions does it raise?',
+        tracks: ['CREATION_SCIENCE', 'HOMESTEADING'],
+        xpReward: 55,
+        coinReward: 14,
+      },
+      {
+        title: 'Animal Care Log',
+        description: 'Document caring for an animal (or describe how you would).',
+        prompt: 'What does this animal need daily? What have you observed about its behavior?',
+        tracks: ['HOMESTEADING', 'HEALTH_NATUROPATHY'],
+        xpReward: 60,
+        coinReward: 15,
+      },
+    ],
+  },
+  {
+    id: 'the_market',
+    name: 'The Market',
+    emoji: '🛒',
+    color: '#65a30d',
+    position: { x: 15, y: 52 },
+    activityTypes: ['build_it', 'explore'],
+    unlockXP: 300,
+    description: 'Real economics. Real skills. How does money actually work?',
+    fallbackMissions: [
+      {
+        title: 'Price Your Product',
+        description: 'Pick something you make or could make and price it to sell.',
+        prompt: 'List your costs, your time, and your selling price. Would you make a profit?',
+        tracks: ['CREATIVE_ECONOMY', 'APPLIED_MATHEMATICS'],
+        xpReward: 75,
+        coinReward: 20,
+      },
+    ],
+  },
+  {
+    id: 'the_chapel',
+    name: 'The Chapel',
+    emoji: '✝️',
+    color: '#7c3aed',
+    position: { x: 85, y: 52 },
+    activityTypes: ['story_mode', 'explore'],
+    unlockXP: 500,
+    description: 'Quiet. Reflective. A place to think about what actually matters.',
+    fallbackMissions: [
+      {
+        title: 'Scripture & Life',
+        description: 'Pick a verse that has meant something to you recently.',
+        prompt: 'Write the verse, explain what it means to you, and how it connects to your life right now.',
+        tracks: ['DISCIPLESHIP', 'ENGLISH_LITERATURE'],
+        xpReward: 60,
+        coinReward: 15,
+      },
+    ],
+  },
+]
+
 export type Track =
   | 'CREATION_SCIENCE'
   | 'HEALTH_NATUROPATHY'
