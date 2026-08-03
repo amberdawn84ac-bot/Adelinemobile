@@ -20,6 +20,8 @@ export default function AdelineGreeting({ studentId, playerName, gradeBand, onDi
       return
     }
 
+    const controller = new AbortController()
+
     streamConversation(
       {
         student_id: studentId,
@@ -33,8 +35,11 @@ export default function AdelineGreeting({ studentId, playerName, gradeBand, onDi
         setText(`Morning, ${playerName}! The town is yours today. Go see what calls to you.`)
         setDone(true)
         console.warn('Greeting stream error:', err)
-      }
+      },
+      controller.signal,
     )
+
+    return () => controller.abort()
   }, [studentId, playerName, gradeBand])
 
   return (

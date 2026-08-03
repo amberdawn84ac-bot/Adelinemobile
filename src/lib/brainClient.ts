@@ -186,12 +186,14 @@ export async function streamConversation(
   onText: (delta: string) => void,
   onDone: () => void,
   onError: (msg: string) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   const headers = await authHeaders()
   const res = await fetch(`${PROXY}/conversation/stream`, {
     method: 'POST',
     headers: { ...headers, Accept: 'text/event-stream' },
     body: JSON.stringify(params),
+    signal,
   }).catch(() => null)
 
   if (!res || !res.ok || !res.body) {
@@ -224,8 +226,12 @@ export async function streamConversation(
       }
       if (streamDone) break
     }
-  } catch {
-    onError('Stream interrupted.')
+  } catch (err) {
+    if (signal?.aborted) {
+      // intentional abort — do not call onError
+    } else {
+      onError('Stream interrupted.')
+    }
   } finally {
     reader.releaseLock()
   }

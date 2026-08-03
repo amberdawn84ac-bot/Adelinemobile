@@ -26,6 +26,7 @@ export default function AdelineKitchen({ studentId, playerName, gradeBand, onBac
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -41,10 +42,16 @@ export default function AdelineKitchen({ studentId, playerName, gradeBand, onBac
     setMessages(prev => [...prev, userMsg, assistantMsg])
     setStreaming(true)
 
-    const history = messages
-      .filter(m => !m.streaming)
-      .slice(-10)
-      .map(m => ({ role: m.role, content: m.content }))
+    // Build history including the message we're about to send
+    const history = [
+      ...messages.filter(m => !m.streaming).slice(-9),
+      { role: 'user' as const, content: text },
+    ].map(m => ({ role: m.role, content: m.content }))
+
+    // Cancel any in-flight stream before starting a new one
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
 
     await streamConversation(
       {
@@ -89,9 +96,14 @@ export default function AdelineKitchen({ studentId, playerName, gradeBand, onBac
         })
         setStreaming(false)
         console.warn('Kitchen stream error:', err)
-      }
+      },
+      controller.signal,
     )
   }
+
+  useEffect(() => {
+    return () => { abortRef.current?.abort() }
+  }, [])
 
   return (
     <div className="flex flex-col h-full bg-amber-50">
