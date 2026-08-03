@@ -5,7 +5,6 @@ import TownBuilding from './TownBuilding'
 import ActivityPicker from '../game/ActivityPicker'
 import AdelineGreeting from '../game/AdelineGreeting'
 import ActivityConfirm, { PendingActivity } from '../chat/ActivityConfirm'
-import { buildMemoryContext } from '../../lib/memoryService'
 import { logActivity } from '../../lib/lifeMapService'
 import { TownBuilding as TownBuildingType } from '../../types/game'
 
@@ -42,8 +41,6 @@ export default function HubWorld({
   const [showGreeting, setShowGreeting] = useState(true)
   const [pickerBuilding, setPickerBuilding] = useState<TownBuildingType | null>(null)
   const [pendingActivity, setPendingActivity] = useState<PendingActivity | null>(null)
-
-  void buildMemoryContext  // available for future use
 
   const movePlayer = useCallback(() => {
     setPlayer(prev => {
