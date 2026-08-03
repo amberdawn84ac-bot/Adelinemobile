@@ -203,21 +203,30 @@ export async function streamConversation(
   const decoder = new TextDecoder()
   let buffer = ''
 
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) { onDone(); break }
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split('\n')
-    buffer = lines.pop() ?? ''
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) { onDone(); break }
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() ?? ''
 
-    for (const line of lines) {
-      if (line.startsWith('event: ')) continue
-      if (!line.startsWith('data: ')) continue
-      try {
-        const payload = JSON.parse(line.slice(6))
-        if (payload.delta !== undefined) onText(payload.delta)
-        if (payload.message !== undefined) onError(payload.message)
-      } catch { /* skip malformed */ }
+      let streamDone = false
+      for (const line of lines) {
+        if (line.startsWith('event: ')) continue
+        if (!line.startsWith('data: ')) continue
+        try {
+          const payload = JSON.parse(line.slice(6))
+          if (payload.done !== undefined) { onDone(); streamDone = true; break }
+          if (payload.delta !== undefined) onText(payload.delta)
+          if (payload.message !== undefined) onError(payload.message)
+        } catch { /* skip malformed */ }
+      }
+      if (streamDone) break
     }
+  } catch {
+    onError('Stream interrupted.')
+  } finally {
+    reader.releaseLock()
   }
 }
