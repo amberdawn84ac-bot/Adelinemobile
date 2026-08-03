@@ -1,41 +1,33 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { AvatarData, RoomId, DEFAULT_AVATAR, LifeMapEntry, Track } from '../types/game'
+import { AvatarData, DEFAULT_AVATAR, LifeMapEntry, Track, ActivityType, BuildingId, GradeBand, TOWN_BUILDINGS } from '../types/game'
 import AvatarBuilder from '../components/avatar/AvatarBuilder'
 import GameHUD from '../components/hud/GameHUD'
 import HubWorld from '../components/world/HubWorld'
 import LifeMap from '../components/life-map/LifeMap'
 import SeasonPass from '../components/season-pass/SeasonPass'
 import RoomMission from '../components/rooms/RoomMission'
-import MathMines from '../components/rooms/MathMines'
-import StoryForest from '../components/rooms/StoryForest'
-import ScienceLab from '../components/rooms/ScienceLab'
-import HomesteadFarm from '../components/rooms/HomesteadFarm'
-import TruthArchive from '../components/rooms/TruthArchive'
+import AdelineKitchen from './AdelineKitchen'
+import BrainBattle from '../components/game/BrainBattle'
 import { supabase } from '../lib/supabase'
 import { logActivity, getLifeMap } from '../lib/lifeMapService'
 import GraduationTracker from '../components/graduation/GraduationTracker'
 import Portfolio from '../components/portfolio/Portfolio'
 import Transcript from '../components/transcript/Transcript'
 import { gradeBandFromAge } from '../lib/academicEngine'
-import { GradeBand } from '../types/game'
 
-type GameScreen = 'avatar_builder' | 'hub' | 'room'
+type GameScreen = 'avatar_builder' | 'hub' | 'mission' | 'brain_battle' | 'kitchen'
 type Overlay = 'life_map' | 'season_pass' | 'graduation' | 'portfolio' | null
 
-const ROOM_CONFIG: Record<RoomId, { label: string; emoji: string; tracks: Track[]; context: string }> = {
-  math_mines:     { label: 'Math Mines',      emoji: '⛏️', tracks: ['APPLIED_MATHEMATICS'],                    context: 'Focus on real-world math: farming budgets, measurements, building calculations, market pricing.' },
-  story_forest:   { label: 'Story Forest',    emoji: '🌲', tracks: ['ENGLISH_LITERATURE'],                     context: 'Focus on reading, writing, storytelling, rhetoric, and comprehension.' },
-  science_lab:    { label: 'Science Lab',     emoji: '🔬', tracks: ['CREATION_SCIENCE'],                       context: 'Focus on creation science, nature observation, household experiments, animal biology.' },
-  homestead_farm: { label: 'Homestead Farm',  emoji: '🌾', tracks: ['HOMESTEADING', 'APPLIED_MATHEMATICS'],    context: 'Focus on farming, animal husbandry, canning, building, selling at market, off-grid living.' },
-  truth_archive:  { label: 'Truth Archive',   emoji: '📜', tracks: ['TRUTH_HISTORY', 'JUSTICE_CHANGEMAKING'], context: 'Focus on primary source history, follow the money, who profits, real unfiltered events.' },
-  // Locked portals (not yet implemented - stub entries):
-  health_grove:   { label: 'Health Grove',    emoji: '🌿', tracks: ['HEALTH_NATUROPATHY'],                    context: 'Natural medicine and the body God designed' },
-  the_council:    { label: 'The Council',     emoji: '⚖️', tracks: ['GOVERNMENT_ECONOMICS'],                  context: 'Civics, economics, and who really pulls the levers' },
-  justice_quarter: { label: 'Justice Quarter', emoji: '✊', tracks: ['JUSTICE_CHANGEMAKING'],                  context: 'Power, resistance, and the changemaker response' },
-  the_chapel:     { label: 'The Chapel',      emoji: '✝️', tracks: ['DISCIPLESHIP'],                           context: 'Faith, character, and reading the world through Scripture' },
-  makers_market:  { label: "Maker's Market",  emoji: '🎨', tracks: ['CREATIVE_ECONOMY'],                      context: 'Making, crafting, and selling as real scholarship' },
+const BUILDING_META: Record<BuildingId, { label: string; emoji: string }> = {
+  adelines_kitchen:    { label: "Adeline's Kitchen", emoji: '🏡' },
+  the_library:         { label: 'The Library',        emoji: '📚' },
+  the_arena:           { label: 'The Arena',          emoji: '⚔️' },
+  the_makers_lab:      { label: "The Maker's Lab",    emoji: '🔧' },
+  the_creek_and_woods: { label: 'The Creek & Woods',  emoji: '🌿' },
+  the_market:          { label: 'The Market',         emoji: '🛒' },
+  the_chapel:          { label: 'The Chapel',         emoji: '✝️' },
 }
 
 function parseAvatar(data: Record<string, unknown>): AvatarData | null {
@@ -55,8 +47,10 @@ export default function GameShell() {
 
   const [screen, setScreen] = useState<GameScreen>(hasAvatar ? 'hub' : 'avatar_builder')
   const [avatarData, setAvatarData] = useState<AvatarData>(storedAvatar ?? guestAvatar ?? DEFAULT_AVATAR)
-  const [currentRoom, setCurrentRoom] = useState<RoomId | null>(null)
-  const [roomMode, setRoomMode] = useState<'quiz' | 'mission'>('mission')
+  const [currentBuilding, setCurrentBuilding] = useState<BuildingId | null>(null)
+  const [activityMode, setActivityMode] = useState<ActivityType>('explore')
+  const [activityTrack, setActivityTrack] = useState<Track | null>(null)
+  const [activityTopic, setActivityTopic] = useState<string | null>(null)
   const [localXP, setLocalXP] = useState(activeChild?.xp ?? guestSession?.xp ?? 0)
   const [localCoins, setLocalCoins] = useState(activeChild?.ade_coins ?? guestSession?.adeCoins ?? 0)
   const [overlay, setOverlay] = useState<Overlay>(null)
@@ -76,9 +70,7 @@ export default function GameShell() {
   }, [activeChild])
 
   useEffect(() => {
-    if (activeChild) {
-      getLifeMap(activeChild.id).then(setAllEntries)
-    }
+    if (activeChild) getLifeMap(activeChild.id).then(setAllEntries)
   }, [activeChild])
 
   async function saveAvatar(avatar: AvatarData) {
@@ -113,7 +105,7 @@ export default function GameShell() {
     setAllEntries(prev => [entry, ...prev])
   }
 
-  async function handleRoomMissionComplete(description: string, tracks: Track[], xp: number, coins: number) {
+  async function handleMissionComplete(description: string, tracks: Track[], xp: number, coins: number) {
     addXP(xp)
     addCoins(coins)
     if (activeChild) {
@@ -132,16 +124,36 @@ export default function GameShell() {
     }
   }
 
-  const enterRoom = useCallback((roomId: RoomId, mode: 'quiz' | 'mission' = 'mission') => {
-    setCurrentRoom(roomId)
-    setRoomMode(mode)
-    setScreen('room')
+  const enterBuilding = useCallback((
+    buildingId: BuildingId,
+    mode: ActivityType,
+    track: Track | null,
+    topic: string | null
+  ) => {
+    setCurrentBuilding(buildingId)
+    setActivityMode(mode)
+    setActivityTrack(track)
+    setActivityTopic(topic)
+    setScreen(mode === 'mini_game' ? 'brain_battle' : 'mission')
   }, [])
 
   async function handleSignOut() {
     await signOut()
     navigate('/')
   }
+
+  function exitToHub() {
+    setCurrentBuilding(null)
+    setScreen('hub')
+  }
+
+  const buildingMeta = currentBuilding ? BUILDING_META[currentBuilding] : null
+
+  // Resolve track: use brain-provided track, or fall back to first track from building config
+  const buildingFallbackTracks: Track[] = currentBuilding
+    ? (TOWN_BUILDINGS.find(b => b.id === currentBuilding)?.fallbackMissions[0]?.tracks ?? ['ENGLISH_LITERATURE'])
+    : ['ENGLISH_LITERATURE']
+  const resolvedTrack: Track = activityTrack ?? buildingFallbackTracks[0]
 
   const hudPlayer = activeChild ? { ...activeChild, xp: localXP, ade_coins: localCoins } : null
   const hudGuest = guestSession ? { ...guestSession, xp: localXP, adeCoins: localCoins } : null
@@ -157,48 +169,83 @@ export default function GameShell() {
     )
   }
 
-  // ── Room view ──
-  if (screen === 'room' && currentRoom) {
-    const config = ROOM_CONFIG[currentRoom]
+  // ── Adeline's Kitchen ──
+  if (screen === 'kitchen') {
     return (
       <div className="w-screen h-screen overflow-hidden relative">
         <GameHUD
           player={hudPlayer}
           guestSession={hudGuest}
           avatarData={avatarData}
-          roomLabel={`${config.emoji} ${config.label}`}
-          onExitRoom={() => { setCurrentRoom(null); setScreen('hub') }}
+          roomLabel="🏡 Adeline's Kitchen"
+          onExitRoom={exitToHub}
           onSignOut={handleSignOut}
         />
         <div className="w-full h-full pt-16">
-          {roomMode === 'mission' ? (
-            <RoomMission
-              roomId={currentRoom}
-              roomLabel={config.label}
-              roomEmoji={config.emoji}
-              roomTracks={config.tracks}
-              playerName={playerName}
-              systemContext={config.context}
-              studentId={activeChild?.id ?? null}
-              gradeBand={gradeBand}
-              onComplete={handleRoomMissionComplete}
-              onBack={() => { setCurrentRoom(null); setScreen('hub') }}
-            />
-          ) : (
-            <>
-              {currentRoom === 'math_mines'     && <MathMines     playerName={playerName} onXpEarned={addXP} onCoinsEarned={addCoins} />}
-              {currentRoom === 'story_forest'   && <StoryForest   playerName={playerName} onXpEarned={addXP} onCoinsEarned={addCoins} />}
-              {currentRoom === 'science_lab'    && <ScienceLab    playerName={playerName} onXpEarned={addXP} onCoinsEarned={addCoins} />}
-              {currentRoom === 'homestead_farm' && <HomesteadFarm playerName={playerName} onXpEarned={addXP} onCoinsEarned={addCoins} />}
-              {currentRoom === 'truth_archive'  && <TruthArchive  playerName={playerName} onXpEarned={addXP} onCoinsEarned={addCoins} />}
-            </>
-          )}
+          <AdelineKitchen
+            studentId={activeChild?.id ?? null}
+            playerName={playerName}
+            gradeBand={gradeBand}
+            onBack={exitToHub}
+          />
         </div>
       </div>
     )
   }
 
-  // ── Hub World (2D exploration) — the main game screen ──
+  // ── Brain Battle mini-game ──
+  if (screen === 'brain_battle' && currentBuilding) {
+    return (
+      <div className="w-screen h-screen overflow-hidden relative">
+        <div className="w-full h-full">
+          <BrainBattle
+            studentId={activeChild?.id ?? null}
+            track={resolvedTrack}
+            gradeBand={gradeBand}
+            playerName={playerName}
+            onComplete={(xp, coins) => {
+              addXP(xp)
+              addCoins(coins)
+              exitToHub()
+            }}
+            onBack={exitToHub}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  // ── Mission view ──
+  if (screen === 'mission' && currentBuilding && buildingMeta) {
+    return (
+      <div className="w-screen h-screen overflow-hidden relative">
+        <GameHUD
+          player={hudPlayer}
+          guestSession={hudGuest}
+          avatarData={avatarData}
+          roomLabel={`${buildingMeta.emoji} ${buildingMeta.label}`}
+          onExitRoom={exitToHub}
+          onSignOut={handleSignOut}
+        />
+        <div className="w-full h-full pt-16">
+          <RoomMission
+            roomId={currentBuilding}
+            roomLabel={buildingMeta.label}
+            roomEmoji={buildingMeta.emoji}
+            roomTracks={[resolvedTrack]}
+            playerName={playerName}
+            systemContext={activityTopic ?? `${activityMode} activity in ${buildingMeta.label}`}
+            studentId={activeChild?.id ?? null}
+            gradeBand={gradeBand}
+            onComplete={handleMissionComplete}
+            onBack={exitToHub}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  // ── Hub World ──
   return (
     <div className="w-screen h-screen overflow-hidden relative">
       <GameHUD
@@ -207,7 +254,6 @@ export default function GameShell() {
         avatarData={avatarData}
         onSignOut={handleSignOut}
       />
-      {/* Overlay launcher buttons */}
       <div className="fixed top-16 right-3 z-40 flex flex-col gap-1.5 pointer-events-auto">
         <button onClick={() => setOverlay('life_map')}
           className="bg-violet-600/90 hover:bg-violet-500 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-xl shadow backdrop-blur transition-all">
@@ -238,7 +284,8 @@ export default function GameShell() {
           playerName={playerName}
           studentId={activeChild?.id ?? null}
           currentXP={localXP}
-          onEnterRoom={(id) => enterRoom(id, 'mission')}
+          onEnterBuilding={enterBuilding}
+          onEnterKitchen={() => setScreen('kitchen')}
           onXpEarned={addXP}
           onCoinsEarned={addCoins}
           onLifeMapEntry={handleLifeMapEntry}
@@ -246,27 +293,13 @@ export default function GameShell() {
       </div>
 
       {overlay === 'life_map' && (
-        <LifeMap
-          studentId={activeChild?.id ?? null}
-          localEntries={lifeMapEntries}
-          onClose={() => setOverlay(null)}
-        />
+        <LifeMap studentId={activeChild?.id ?? null} localEntries={lifeMapEntries} onClose={() => setOverlay(null)} />
       )}
       {overlay === 'season_pass' && (
-        <SeasonPass
-          currentXP={localXP}
-          claimedTiers={claimedTiers}
-          onClaimTier={claimSeasonTier}
-          onClose={() => setOverlay(null)}
-        />
+        <SeasonPass currentXP={localXP} claimedTiers={claimedTiers} onClaimTier={claimSeasonTier} onClose={() => setOverlay(null)} />
       )}
       {overlay === 'graduation' && (
-        <GraduationTracker
-          entries={allEntries}
-          gradeBand={gradeBand}
-          studentName={playerName}
-          onClose={() => setOverlay(null)}
-        />
+        <GraduationTracker entries={allEntries} gradeBand={gradeBand} studentName={playerName} onClose={() => setOverlay(null)} />
       )}
       {overlay === 'portfolio' && (
         <Portfolio
