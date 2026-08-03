@@ -85,19 +85,23 @@ export default function GameShell() {
   }
 
   async function addXP(amount: number) {
-    const newXP = localXP + amount
-    setLocalXP(newXP)
-    if (activeChild) {
-      await supabase.from('aw_student_profiles').update({ xp: newXP }).eq('id', activeChild.id)
-    }
+    setLocalXP(prev => {
+      const newXP = prev + amount
+      if (activeChild) {
+        supabase.from('aw_student_profiles').update({ xp: newXP }).eq('id', activeChild.id)
+      }
+      return newXP
+    })
   }
 
   async function addCoins(amount: number) {
-    const newCoins = localCoins + amount
-    setLocalCoins(newCoins)
-    if (activeChild) {
-      await supabase.from('aw_student_profiles').update({ ade_coins: newCoins }).eq('id', activeChild.id)
-    }
+    setLocalCoins(prev => {
+      const newCoins = prev + amount
+      if (activeChild) {
+        supabase.from('aw_student_profiles').update({ ade_coins: newCoins }).eq('id', activeChild.id)
+      }
+      return newCoins
+    })
   }
 
   function handleLifeMapEntry(entry: LifeMapEntry) {
