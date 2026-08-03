@@ -141,3 +141,83 @@ export async function registerStudent(params: {
   const result = await post('/students/register', params)
   return result !== null
 }
+
+// ── Learning gaps ─────────────────────────────────────────────────────────────
+
+export interface BrainGap {
+  standard_id: string
+  reason: string
+}
+
+export interface BrainGapsResponse {
+  student_id: string
+  priority_subject: string   // e.g. "APPLIED_MATHEMATICS"
+  saturation: number
+  gap_standards: BrainGap[]
+  suggested_daily_bread: string
+}
+
+/**
+ * Get the student's learning gaps from the brain.
+ * Returns null if brain is unreachable or student has no data yet.
+ */
+export async function getGaps(studentId: string): Promise<BrainGapsResponse | null> {
+  return get<BrainGapsResponse>(`/learning-path/${studentId}/gaps`)
+}
+
+// ── Conversation stream ───────────────────────────────────────────────────────
+
+export interface ConversationStreamParams {
+  student_id: string
+  message: string
+  track?: string
+  grade_level?: string
+  conversation_history?: { role: 'user' | 'assistant'; content: string }[]
+}
+
+/**
+ * Stream a conversation response from Adeline via SSE.
+ * Caller is responsible for managing lifecycle.
+ *
+ * Events: text {delta}, block {block_type, content, ...}, zpd {zone, ...}, done {}, error {message}
+ */
+export async function streamConversation(
+  params: ConversationStreamParams,
+  onText: (delta: string) => void,
+  onDone: () => void,
+  onError: (msg: string) => void,
+): Promise<void> {
+  const headers = await authHeaders()
+  const res = await fetch(`${PROXY}/conversation/stream`, {
+    method: 'POST',
+    headers: { ...headers, Accept: 'text/event-stream' },
+    body: JSON.stringify(params),
+  }).catch(() => null)
+
+  if (!res || !res.ok || !res.body) {
+    onError('Could not reach Adeline right now.')
+    return
+  }
+
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) { onDone(); break }
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() ?? ''
+
+    for (const line of lines) {
+      if (line.startsWith('event: ')) continue
+      if (!line.startsWith('data: ')) continue
+      try {
+        const payload = JSON.parse(line.slice(6))
+        if (payload.delta !== undefined) onText(payload.delta)
+        if (payload.message !== undefined) onError(payload.message)
+      } catch { /* skip malformed */ }
+    }
+  }
+}
