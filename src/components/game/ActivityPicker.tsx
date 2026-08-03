@@ -1,6 +1,6 @@
 // src/components/game/ActivityPicker.tsx
 import { useState, useEffect } from 'react'
-import { TownBuilding, ActivityType, Track } from '../../types/game'
+import { TownBuilding, ActivityType, Track, TRACK_LABELS } from '../../types/game'
 import { getGaps, BrainGapsResponse } from '../../lib/brainClient'
 
 const ACTIVITY_LABELS: Record<ActivityType, { label: string; emoji: string; description: string }> = {
@@ -37,16 +37,22 @@ export default function ActivityPicker({ building, studentId, onSelect, onClose 
 
   useEffect(() => {
     if (!studentId) return
+    let cancelled = false
     setLoading(true)
     getGaps(studentId).then(data => {
+      if (cancelled) return
       setGaps(data)
       setLoading(false)
     })
+    return () => { cancelled = true }
   }, [studentId])
 
   const subjectLabel = gaps ? (TRACK_DISPLAY[gaps.priority_subject] ?? gaps.priority_subject) : null
   const suggestedTopic = gaps?.suggested_daily_bread ?? null
-  const track = gaps?.priority_subject as Track | null ?? null
+  const track: Track | null =
+    gaps?.priority_subject && Object.prototype.hasOwnProperty.call(TRACK_LABELS, gaps.priority_subject)
+      ? (gaps.priority_subject as Track)
+      : null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>

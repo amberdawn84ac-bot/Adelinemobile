@@ -34,17 +34,19 @@ export default function BrainBattle({ studentId, track, gradeBand, playerName, o
   const [currentIdx, setCurrentIdx] = useState(0)
   const [inputVal, setInputVal] = useState('')
   const [timeLeft, setTimeLeft] = useState(QUESTION_TIME)
-  const [error, setError] = useState<string | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  void error
+  const currentIdxRef = useRef(0)
 
   useEffect(() => {
-    loadQuestions()
-    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+    let mounted = true
+    loadQuestions(mounted)
+    return () => {
+      mounted = false
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
   }, [])
 
-  async function loadQuestions() {
+  async function loadQuestions(mounted = true) {
     const lesson = await generateLesson({
       student_id: studentId ?? 'guest',
       track,
@@ -57,6 +59,7 @@ export default function BrainBattle({ studentId, track, gradeBand, playerName, o
     const quizBlocks = lesson?.blocks.filter(b => b.type === 'QUIZ') ?? []
     const parsed = quizBlocks.map(parseQuizBlock).filter(Boolean) as { question: string; answer: string }[]
 
+    if (!mounted) return
     if (parsed.length === 0) {
       setQuestions([
         { question: 'What does photosynthesis produce?', answer: 'oxygen and glucose', userAnswer: '', correct: null },
@@ -86,12 +89,13 @@ export default function BrainBattle({ studentId, track, gradeBand, playerName, o
   function submitAnswer(val: string) {
     if (timerRef.current) clearInterval(timerRef.current)
     const answer = val.trim().toLowerCase()
-    const correctAnswer = questions[currentIdx].answer.toLowerCase()
-    const correct = answer.length > 0 && correctAnswer.includes(answer)
+    const idx = currentIdxRef.current
+    const correctAnswer = questions[idx].answer.toLowerCase()
+    const correct = answer.length >= 3 && correctAnswer.includes(answer)
 
     setQuestions(prev => {
       const updated = [...prev]
-      updated[currentIdx] = { ...updated[currentIdx], userAnswer: val, correct }
+      updated[idx] = { ...updated[idx], userAnswer: val, correct }
       return updated
     })
     setInputVal('')
@@ -101,6 +105,7 @@ export default function BrainBattle({ studentId, track, gradeBand, playerName, o
       setPhase('results')
     } else {
       setCurrentIdx(nextIdx)
+      currentIdxRef.current = nextIdx
       startTimer()
     }
   }
@@ -110,18 +115,6 @@ export default function BrainBattle({ studentId, track, gradeBand, playerName, o
       <div className="flex flex-col items-center justify-center h-full bg-red-900 text-white gap-4">
         <div className="w-12 h-12 border-4 border-red-300 border-t-transparent rounded-full animate-spin" />
         <p className="text-lg font-bold">Preparing your battle...</p>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full bg-red-900 text-white gap-4 p-8">
-        <p className="text-4xl">⚠️</p>
-        <p className="text-center">{error}</p>
-        <button onClick={onBack} className="px-6 py-3 bg-white text-red-900 font-bold rounded-2xl">
-          Back to Town
-        </button>
       </div>
     )
   }
