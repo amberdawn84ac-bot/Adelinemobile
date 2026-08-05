@@ -81,20 +81,14 @@ export default function GameShell() {
     setScreen('hub')
   }
 
-  async function addXP(amount: number) {
-    setLocalXP(prev => {
-      const newXP = prev + amount
-      if (activeChild) patchXP(activeChild.id, amount)
-      return newXP
-    })
+  function addXP(amount: number) {
+    setLocalXP(prev => prev + amount)
+    if (activeChild) patchXP(activeChild.id, amount)
   }
 
-  async function addCoins(amount: number) {
-    setLocalCoins(prev => {
-      const newCoins = prev + amount
-      if (activeChild) patchCoins(activeChild.id, amount)
-      return newCoins
-    })
+  function addCoins(amount: number) {
+    setLocalCoins(prev => prev + amount)
+    if (activeChild) patchCoins(activeChild.id, amount)
   }
 
   function handleLifeMapEntry(entry: LifeMapEntry) {
