@@ -10,15 +10,14 @@ import SeasonPass from '../components/season-pass/SeasonPass'
 import RoomMission from '../components/rooms/RoomMission'
 import AdelineKitchen from './AdelineKitchen'
 import BrainBattle from '../components/game/BrainBattle'
-import { supabase } from '../lib/supabase'
+import { updateStudentProfile, patchXP, patchCoins, getSeasonPass, patchSeasonPass } from '../lib/brainClient'
 import { logActivity, getLifeMap } from '../lib/lifeMapService'
 import GraduationTracker from '../components/graduation/GraduationTracker'
 import Portfolio from '../components/portfolio/Portfolio'
 import Transcript from '../components/transcript/Transcript'
-import { gradeBandFromAge } from '../lib/academicEngine'
 
 type GameScreen = 'avatar_builder' | 'hub' | 'mission' | 'brain_battle' | 'kitchen'
-type Overlay = 'life_map' | 'season_pass' | 'graduation' | 'portfolio' | null
+type Overlay = 'life_map' | 'season_pass' | 'graduation' | 'portfolio' | 'settings' | null
 
 const BUILDING_META: Record<BuildingId, { label: string; emoji: string }> = {
   adelines_kitchen:    { label: "Adeline's Kitchen", emoji: '🏡' },
@@ -36,7 +35,7 @@ function parseAvatar(data: Record<string, unknown>): AvatarData | null {
 }
 
 export default function GameShell() {
-  const { activeChild, guestSession, signOut, parentAccount } = useAuth()
+  const { user: activeChild, guestSession, signOut } = useAuth()
   const navigate = useNavigate()
 
   const storedAvatar = activeChild?.avatar_data ? parseAvatar(activeChild.avatar_data as Record<string, unknown>) : null
@@ -58,14 +57,13 @@ export default function GameShell() {
   const [claimedTiers, setClaimedTiers] = useState<number[]>([])
   const [allEntries, setAllEntries] = useState<LifeMapEntry[]>([])
   const [showTranscript, setShowTranscript] = useState(false)
-  const gradeBand = gradeBandFromAge(activeChild?.age ?? null) as GradeBand
+  const gradeBand = (activeChild?.grade_level ?? 'K-2') as GradeBand
 
   const playerName = activeChild?.display_name ?? guestSession?.displayName ?? 'Explorer'
 
   useEffect(() => {
     if (activeChild) {
-      supabase.from('aw_season_pass').select('claimed_tiers').eq('student_id', activeChild.id).single()
-        .then(({ data }) => { if (data) setClaimedTiers(data.claimed_tiers ?? []) })
+      getSeasonPass(activeChild.id).then(setClaimedTiers)
     }
   }, [activeChild])
 
@@ -76,8 +74,7 @@ export default function GameShell() {
   async function saveAvatar(avatar: AvatarData) {
     setAvatarData(avatar)
     if (activeChild) {
-      await supabase.from('aw_student_profiles')
-        .update({ avatar_data: avatar as unknown as Record<string, unknown> }).eq('id', activeChild.id)
+      await updateStudentProfile(activeChild.id, { avatar_data: avatar as unknown as Record<string, unknown> })
     } else if (guestSession) {
       localStorage.setItem('adeline_guest', JSON.stringify({ ...guestSession, avatarData: avatar }))
     }
@@ -87,9 +84,7 @@ export default function GameShell() {
   async function addXP(amount: number) {
     setLocalXP(prev => {
       const newXP = prev + amount
-      if (activeChild) {
-        supabase.from('aw_student_profiles').update({ xp: newXP }).eq('id', activeChild.id)
-      }
+      if (activeChild) patchXP(activeChild.id, amount)
       return newXP
     })
   }
@@ -97,9 +92,7 @@ export default function GameShell() {
   async function addCoins(amount: number) {
     setLocalCoins(prev => {
       const newCoins = prev + amount
-      if (activeChild) {
-        supabase.from('aw_student_profiles').update({ ade_coins: newCoins }).eq('id', activeChild.id)
-      }
+      if (activeChild) patchCoins(activeChild.id, amount)
       return newCoins
     })
   }
@@ -123,8 +116,7 @@ export default function GameShell() {
     setClaimedTiers(newClaimed)
     if (coinsToAdd > 0) addCoins(coinsToAdd)
     if (activeChild) {
-      await supabase.from('aw_season_pass')
-        .upsert({ student_id: activeChild.id, claimed_tiers: newClaimed }, { onConflict: 'student_id' })
+      await patchSeasonPass(activeChild.id, newClaimed)
     }
   }
 
@@ -275,12 +267,10 @@ export default function GameShell() {
           className="bg-blue-600/90 hover:bg-blue-500 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-xl shadow backdrop-blur transition-all">
           📁 Portfolio
         </button>
-        {parentAccount && (
-          <button onClick={() => navigate('/parent-dashboard')}
-            className="bg-slate-600/90 hover:bg-slate-500 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-xl shadow backdrop-blur transition-all">
-            👪 Parent
-          </button>
-        )}
+        <button onClick={() => setOverlay('settings')}
+          className="bg-slate-600/90 hover:bg-slate-500 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-xl shadow backdrop-blur transition-all">
+          ⚙️ Settings
+        </button>
       </div>
       <div className="w-full h-full pt-16">
         <HubWorld
@@ -305,6 +295,30 @@ export default function GameShell() {
       {overlay === 'graduation' && (
         <GraduationTracker entries={allEntries} gradeBand={gradeBand} studentName={playerName} onClose={() => setOverlay(null)} />
       )}
+      {overlay === 'settings' && activeChild && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-6" onClick={() => setOverlay(null)}>
+          <div className="bg-white rounded-3xl shadow-xl p-6 max-w-sm w-full space-y-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold font-serif text-slate-800">Settings</h3>
+            {activeChild.parent_id ? (
+              <p className="text-sm text-slate-600">Linked to {activeChild.parent_display_name ?? 'a parent'}.</p>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-slate-600">Link with a parent</p>
+                <p className="text-2xl font-mono font-bold tracking-widest text-amber-700 text-center bg-amber-50 rounded-xl py-3">
+                  {activeChild.link_code}
+                </p>
+                <p className="text-xs text-slate-400">Give this code to your parent to link accounts on the desktop app.</p>
+              </div>
+            )}
+            <button onClick={signOut} className="w-full py-2.5 text-sm text-slate-500 hover:text-slate-700 border-t border-slate-100 pt-4">
+              Sign Out
+            </button>
+            <button onClick={() => setOverlay(null)} className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl">
+              Close
+            </button>
+          </div>
+        </div>
+      )}
       {overlay === 'portfolio' && (
         <Portfolio
           entries={allEntries}
@@ -319,7 +333,7 @@ export default function GameShell() {
           entries={allEntries}
           studentName={playerName}
           gradeBand={gradeBand}
-          parentName={parentAccount?.display_name ?? 'Parent'}
+          parentName={activeChild?.parent_display_name ?? 'Parent'}
           onClose={() => setShowTranscript(false)}
         />
       )}
