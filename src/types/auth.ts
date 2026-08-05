@@ -1,25 +1,16 @@
-export interface ParentAccount {
-  id: string
-  email: string
-  display_name: string
-  created_at: string
-}
+import { GradeBand } from './game'
 
-export interface StudentProfile {
+export interface StudentUser {
   id: string
-  parent_id: string
   display_name: string
   username: string
-  username_approved: boolean
-  age: number | null
-  avatar_data: Record<string, unknown>
-  avatar_approved: boolean
   xp: number
   ade_coins: number
-  trading_enabled: boolean
-  grade_level: string
-  registered_in_brain: boolean
-  created_at: string
+  avatar_data: Record<string, unknown>
+  grade_level: GradeBand
+  link_code: string
+  parent_id: string | null
+  parent_display_name: string | null
 }
 
 export interface GuestSession {
