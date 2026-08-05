@@ -1,14 +1,8 @@
 export type AvatarCharacter =
-  | 'girl_young_0' | 'girl_young_1' | 'girl_young_2'
-  | 'girl_young_3' | 'girl_young_4' | 'girl_young_5'
-  | 'girl_young_6' | 'girl_young_7' | 'girl_young_8'
-  | 'boy_young_0'  | 'boy_young_1'  | 'boy_young_2'
-  | 'boy_young_3'  | 'boy_young_4'  | 'boy_young_5'
-  | 'boy_young_6'  | 'boy_young_7'  | 'boy_young_8'
-  | 'girl_middle_0' | 'girl_middle_1' | 'girl_middle_2'
-  | 'girl_high_0'   | 'girl_high_1'   | 'girl_high_2'
-  | 'boy_middle_0'  | 'boy_middle_1'  | 'boy_middle_2'
-  | 'boy_high_0'    | 'boy_high_1'    | 'boy_high_2'
+  | 'portrait_01' | 'portrait_02' | 'portrait_03' | 'portrait_04'
+  | 'portrait_05' | 'portrait_06' | 'portrait_07' | 'portrait_08'
+  | 'portrait_09' | 'portrait_10' | 'portrait_11' | 'portrait_12'
+  | 'portrait_13' | 'portrait_14' | 'portrait_15' | 'portrait_16'
 
 export interface AvatarData {
   character: AvatarCharacter
@@ -135,7 +129,7 @@ export const HUB_PORTALS: Portal[] = [
 ]
 
 export const DEFAULT_AVATAR: AvatarData = {
-  character: 'girl_young_4',
+  character: 'portrait_01',
   displayColor: '#f59e0b'
 }
 

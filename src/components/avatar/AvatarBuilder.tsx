@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { AvatarData, AvatarCharacter, DEFAULT_AVATAR } from '../../types/game'
-import AvatarRenderer from './AvatarRenderer'
+import AvatarRenderer, { ALL_PORTRAITS } from './AvatarRenderer'
 
 interface Props {
   initialAvatar?: AvatarData
@@ -19,50 +19,8 @@ const ACCENT_COLORS = [
   { label: 'Teal',    value: '#14b8a6' },
 ]
 
-type Category = 'young_girl' | 'young_boy' | 'older_girl' | 'older_boy'
-
-const CATEGORIES: { id: Category; label: string; emoji: string }[] = [
-  { id: 'young_girl',  label: 'Young Girl',  emoji: '👧' },
-  { id: 'young_boy',   label: 'Young Boy',   emoji: '👦' },
-  { id: 'older_girl',  label: 'Older Girl',  emoji: '🧒' },
-  { id: 'older_boy',   label: 'Older Boy',   emoji: '🧒' },
-]
-
-const CATEGORY_CHARACTERS: Record<Category, AvatarCharacter[]> = {
-  young_girl: [
-    'girl_young_0','girl_young_1','girl_young_2',
-    'girl_young_3','girl_young_4','girl_young_5',
-    'girl_young_6','girl_young_7','girl_young_8',
-  ],
-  young_boy: [
-    'boy_young_0','boy_young_1','boy_young_2',
-    'boy_young_3','boy_young_4','boy_young_5',
-    'boy_young_6','boy_young_7','boy_young_8',
-  ],
-  older_girl: [
-    'girl_middle_0','girl_middle_1','girl_middle_2',
-    'girl_high_0','girl_high_1','girl_high_2',
-  ],
-  older_boy: [
-    'boy_middle_0','boy_middle_1','boy_middle_2',
-    'boy_high_0','boy_high_1','boy_high_2',
-  ],
-}
-
-function getCategoryForCharacter(char: AvatarCharacter): Category {
-  if (char.startsWith('girl_young')) return 'young_girl'
-  if (char.startsWith('boy_young'))  return 'young_boy'
-  if (char.startsWith('girl_'))      return 'older_girl'
-  return 'older_boy'
-}
-
 export default function AvatarBuilder({ initialAvatar, playerName, onSave }: Props) {
   const [avatar, setAvatar] = useState<AvatarData>(initialAvatar ?? DEFAULT_AVATAR)
-  const [category, setCategory] = useState<Category>(
-    initialAvatar ? getCategoryForCharacter(initialAvatar.character) : 'young_girl'
-  )
-
-  const characters = CATEGORY_CHARACTERS[category]
 
   function selectCharacter(char: AvatarCharacter) {
     setAvatar(prev => ({ ...prev, character: char }))
@@ -90,30 +48,11 @@ export default function AvatarBuilder({ initialAvatar, playerName, onSave }: Pro
           </div>
         </div>
 
-        {/* Category tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => {
-                setCategory(cat.id)
-                setAvatar(prev => ({ ...prev, character: CATEGORY_CHARACTERS[cat.id][0] }))
-              }}
-              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-                category === cat.id ? 'bg-white text-purple-900' : 'bg-white/20 text-white hover:bg-white/30'
-              }`}
-            >
-              <span>{cat.emoji}</span>
-              {cat.label}
-            </button>
-          ))}
-        </div>
-
         {/* Character grid */}
         <div>
-          <p className="text-purple-200 text-xs font-semibold uppercase tracking-wider mb-3">Choose your pose</p>
-          <div className="grid grid-cols-3 gap-2">
-            {characters.map(char => (
+          <p className="text-purple-200 text-xs font-semibold uppercase tracking-wider mb-3">Choose your look</p>
+          <div className="grid grid-cols-4 gap-2">
+            {ALL_PORTRAITS.map(char => (
               <button
                 key={char}
                 onClick={() => selectCharacter(char)}

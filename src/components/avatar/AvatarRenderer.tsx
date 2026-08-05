@@ -1,48 +1,25 @@
-import { AvatarData } from '../../types/game'
+import { AvatarCharacter, AvatarData } from '../../types/game'
 
-// Actual pixel dimensions of each sprite sheet
-const SHEET_DIMS: Record<string, { w: number; h: number; cols: number; rows: number }> = {
-  '/avatar_girl_young.png':  { w: 1402, h: 1122, cols: 3, rows: 3 },
-  '/avatar_boy_young.png':   { w: 1536, h: 1024, cols: 4, rows: 3 },
-  '/avatar_older_kids.png':  { w: 1536, h: 1024, cols: 3, rows: 4 },
+const PORTRAIT_PATHS: Record<AvatarCharacter, string> = {
+  portrait_01: '/avatars/portrait-01.png',
+  portrait_02: '/avatars/portrait-02.png',
+  portrait_03: '/avatars/portrait-03.png',
+  portrait_04: '/avatars/portrait-04.png',
+  portrait_05: '/avatars/portrait-05.png',
+  portrait_06: '/avatars/portrait-06.png',
+  portrait_07: '/avatars/portrait-07.png',
+  portrait_08: '/avatars/portrait-08.png',
+  portrait_09: '/avatars/portrait-09.png',
+  portrait_10: '/avatars/portrait-10.png',
+  portrait_11: '/avatars/portrait-11.png',
+  portrait_12: '/avatars/portrait-12.png',
+  portrait_13: '/avatars/portrait-13.png',
+  portrait_14: '/avatars/portrait-14.png',
+  portrait_15: '/avatars/portrait-15.png',
+  portrait_16: '/avatars/portrait-16.png',
 }
 
-// Each entry: which sheet, and which grid cell (col/row, 0-indexed)
-const SPRITE_CONFIG: Record<string, { sheet: string; col: number; row: number }> = {
-  // Young girl — 3 cols × 3 rows
-  girl_young_0: { sheet: '/avatar_girl_young.png', col: 0, row: 0 },
-  girl_young_1: { sheet: '/avatar_girl_young.png', col: 1, row: 0 },
-  girl_young_2: { sheet: '/avatar_girl_young.png', col: 2, row: 0 },
-  girl_young_3: { sheet: '/avatar_girl_young.png', col: 0, row: 1 },
-  girl_young_4: { sheet: '/avatar_girl_young.png', col: 1, row: 1 },
-  girl_young_5: { sheet: '/avatar_girl_young.png', col: 2, row: 1 },
-  girl_young_6: { sheet: '/avatar_girl_young.png', col: 0, row: 2 },
-  girl_young_7: { sheet: '/avatar_girl_young.png', col: 1, row: 2 },
-  girl_young_8: { sheet: '/avatar_girl_young.png', col: 2, row: 2 },
-  // Young boy — 4 cols × 3 rows (actual sheet is landscape 1536×1024)
-  boy_young_0: { sheet: '/avatar_boy_young.png', col: 0, row: 0 },
-  boy_young_1: { sheet: '/avatar_boy_young.png', col: 1, row: 0 },
-  boy_young_2: { sheet: '/avatar_boy_young.png', col: 2, row: 0 },
-  boy_young_3: { sheet: '/avatar_boy_young.png', col: 3, row: 0 },
-  boy_young_4: { sheet: '/avatar_boy_young.png', col: 0, row: 1 },
-  boy_young_5: { sheet: '/avatar_boy_young.png', col: 1, row: 1 },
-  boy_young_6: { sheet: '/avatar_boy_young.png', col: 2, row: 1 },
-  boy_young_7: { sheet: '/avatar_boy_young.png', col: 3, row: 1 },
-  boy_young_8: { sheet: '/avatar_boy_young.png', col: 0, row: 2 },
-  // Older kids — 3 cols × 4 rows: rows 0-1 = girls (middle/high), rows 2-3 = boys
-  girl_middle_0: { sheet: '/avatar_older_kids.png', col: 0, row: 0 },
-  girl_middle_1: { sheet: '/avatar_older_kids.png', col: 1, row: 0 },
-  girl_middle_2: { sheet: '/avatar_older_kids.png', col: 2, row: 0 },
-  girl_high_0:   { sheet: '/avatar_older_kids.png', col: 0, row: 1 },
-  girl_high_1:   { sheet: '/avatar_older_kids.png', col: 1, row: 1 },
-  girl_high_2:   { sheet: '/avatar_older_kids.png', col: 2, row: 1 },
-  boy_middle_0:  { sheet: '/avatar_older_kids.png', col: 0, row: 2 },
-  boy_middle_1:  { sheet: '/avatar_older_kids.png', col: 1, row: 2 },
-  boy_middle_2:  { sheet: '/avatar_older_kids.png', col: 2, row: 2 },
-  boy_high_0:    { sheet: '/avatar_older_kids.png', col: 0, row: 3 },
-  boy_high_1:    { sheet: '/avatar_older_kids.png', col: 1, row: 3 },
-  boy_high_2:    { sheet: '/avatar_older_kids.png', col: 2, row: 3 },
-}
+export const ALL_PORTRAITS = Object.keys(PORTRAIT_PATHS) as AvatarCharacter[]
 
 interface Props {
   avatar: AvatarData
@@ -51,20 +28,7 @@ interface Props {
 }
 
 export default function AvatarRenderer({ avatar, size = 80, className = '' }: Props) {
-  const cfg = SPRITE_CONFIG[avatar.character] ?? SPRITE_CONFIG['girl_young_4']
-  const dims = SHEET_DIMS[cfg.sheet]
-
-  // Each cell's natural pixel size
-  const cellW = dims.w / dims.cols
-  const cellH = dims.h / dims.rows
-
-  // Scale factor so the cell fits within `size` (preserving aspect, fitting the taller dimension)
-  const scale = size / Math.max(cellW, cellH)
-
-  const bgW = Math.round(dims.w * scale)
-  const bgH = Math.round(dims.h * scale)
-  const bgX = -Math.round(cfg.col * cellW * scale)
-  const bgY = -Math.round(cfg.row * cellH * scale)
+  const src = PORTRAIT_PATHS[avatar.character] ?? PORTRAIT_PATHS.portrait_01
 
   return (
     <div
@@ -72,15 +36,12 @@ export default function AvatarRenderer({ avatar, size = 80, className = '' }: Pr
       style={{
         width: size,
         height: size,
-        backgroundImage: `url(${cfg.sheet})`,
-        backgroundSize: `${bgW}px ${bgH}px`,
-        backgroundPosition: `${bgX}px ${bgY}px`,
-        backgroundRepeat: 'no-repeat',
         outline: `3px solid ${avatar.displayColor}`,
         outlineOffset: '-3px',
         borderRadius: '12px',
       }}
-      aria-label="Player avatar"
-    />
+    >
+      <img src={src} alt="Player avatar" className="w-full h-full object-cover" />
+    </div>
   )
 }
