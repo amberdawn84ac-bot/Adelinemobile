@@ -29,16 +29,16 @@ export default function LandingPage() {
 
         <div className="space-y-3">
           <button
-            onClick={() => navigate('/login')}
+            onClick={() => navigate('/auth')}
             className="w-full py-3 px-4 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl transition-all"
           >
             Sign In
           </button>
           <button
-            onClick={() => navigate('/signup')}
+            onClick={() => navigate('/auth')}
             className="w-full py-3 px-4 bg-white hover:bg-amber-50 border-2 border-amber-200 text-amber-800 font-semibold rounded-xl transition-all"
           >
-            Create Parent Account
+            Create Account
           </button>
 
           <div className="relative">
