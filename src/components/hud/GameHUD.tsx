@@ -1,10 +1,10 @@
-import { StudentProfile } from '../../types/auth'
+import { StudentUser } from '../../types/auth'
 import { GuestSession } from '../../types/auth'
 import { AvatarData } from '../../types/game'
 import AvatarRenderer from '../avatar/AvatarRenderer'
 
 interface Props {
-  player: (StudentProfile & { xp: number; ade_coins: number }) | null
+  player: StudentUser | null
   guestSession: (GuestSession & { xp: number; adeCoins: number }) | null
   avatarData: AvatarData
   roomLabel?: string
