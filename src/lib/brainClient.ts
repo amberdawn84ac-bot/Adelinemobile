@@ -305,3 +305,45 @@ export async function streamConversation(
     reader.releaseLock()
   }
 }
+
+// ── Towns ─────────────────────────────────────────────────────────────────────
+
+export interface TownMember {
+  id: string
+  display_name: string
+  username: string
+}
+
+export interface TownBuildingRef {
+  building_key: string
+}
+
+export interface Town {
+  id: string
+  name: string
+  join_code: string
+  treasury: number
+  members: TownMember[]
+  buildings: TownBuildingRef[]
+}
+
+/** Create a new town. Returns null if the brain is unreachable or the caller is already in a town. */
+export async function createTown(name: string): Promise<Town | null> {
+  return post<Town>('/towns', { name })
+}
+
+/** Join a town by its 6-character code. Returns null on invalid code or if already in a town. */
+export async function joinTown(code: string): Promise<Town | null> {
+  return post<Town>('/towns/join', { code })
+}
+
+/** Fetch a town's details. Caller must be a member. */
+export async function getTown(townId: string): Promise<Town | null> {
+  return get<Town>(`/towns/${townId}`)
+}
+
+/** Adjust the town's shared treasury by a delta. Returns the new total, or null on failure. */
+export async function patchTownTreasury(townId: string, delta: number): Promise<number | null> {
+  const result = await patch_<{ treasury: number }>(`/towns/${townId}/treasury`, { delta })
+  return result?.treasury ?? null
+}
