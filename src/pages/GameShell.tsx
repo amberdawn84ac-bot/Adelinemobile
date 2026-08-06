@@ -10,7 +10,7 @@ import SeasonPass from '../components/season-pass/SeasonPass'
 import RoomMission from '../components/rooms/RoomMission'
 import AdelineKitchen from './AdelineKitchen'
 import BrainBattle from '../components/game/BrainBattle'
-import { updateStudentProfile, patchXP, patchCoins, getSeasonPass, patchSeasonPass } from '../lib/brainClient'
+import { updateStudentProfile, patchXP, patchCoins, getSeasonPass, patchSeasonPass, createTown, joinTown, getTown, Town } from '../lib/brainClient'
 import { logActivity, getLifeMap } from '../lib/lifeMapService'
 import GraduationTracker from '../components/graduation/GraduationTracker'
 import Portfolio from '../components/portfolio/Portfolio'
@@ -57,6 +57,11 @@ export default function GameShell() {
   const [claimedTiers, setClaimedTiers] = useState<number[]>([])
   const [allEntries, setAllEntries] = useState<LifeMapEntry[]>([])
   const [showTranscript, setShowTranscript] = useState(false)
+  const [town, setTown] = useState<Town | null>(null)
+  const [townFormMode, setTownFormMode] = useState<'create' | 'join'>('create')
+  const [townFormValue, setTownFormValue] = useState('')
+  const [townFormError, setTownFormError] = useState('')
+  const [townFormLoading, setTownFormLoading] = useState(false)
   const gradeBand = (activeChild?.grade_level ?? 'K-2') as GradeBand
 
   const playerName = activeChild?.display_name ?? guestSession?.displayName ?? 'Explorer'
@@ -70,6 +75,12 @@ export default function GameShell() {
   useEffect(() => {
     if (activeChild) getLifeMap(activeChild.id).then(setAllEntries)
   }, [activeChild])
+
+  useEffect(() => {
+    if (overlay === 'settings' && activeChild?.town_id && !town) {
+      getTown(activeChild.town_id).then(setTown)
+    }
+  }, [overlay, activeChild, town])
 
   async function saveAvatar(avatar: AvatarData) {
     setAvatarData(avatar)
@@ -89,6 +100,23 @@ export default function GameShell() {
   function addCoins(amount: number) {
     setLocalCoins(prev => prev + amount)
     if (activeChild) patchCoins(activeChild.id, amount)
+  }
+
+  async function handleTownFormSubmit() {
+    setTownFormError('')
+    setTownFormLoading(true)
+    try {
+      const result = townFormMode === 'create'
+        ? await createTown(townFormValue.trim())
+        : await joinTown(townFormValue.trim().toUpperCase())
+      if (!result) {
+        setTownFormError(townFormMode === 'create' ? 'Could not create town. Try again.' : 'Join code not found.')
+      } else {
+        setTown(result)
+      }
+    } finally {
+      setTownFormLoading(false)
+    }
   }
 
   function handleLifeMapEntry(entry: LifeMapEntry) {
@@ -304,6 +332,51 @@ export default function GameShell() {
                 <p className="text-xs text-slate-400">Give this code to your parent to link accounts on the desktop app.</p>
               </div>
             )}
+            <div className="border-t border-slate-100 pt-4 space-y-2">
+              <p className="text-sm font-semibold text-slate-700">Your Town</p>
+              {activeChild.town_id && town ? (
+                <div className="space-y-1">
+                  <p className="text-sm text-slate-600">{town.name}</p>
+                  <p className="text-xs text-slate-400">{town.members.length} member{town.members.length === 1 ? '' : 's'} · {town.treasury} AdeCoins in the treasury</p>
+                  <p className="text-xs text-slate-400 font-mono">Join code: {town.join_code}</p>
+                </div>
+              ) : activeChild.town_id ? (
+                <p className="text-xs text-slate-400">Loading town...</p>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex gap-2 text-xs">
+                    <button
+                      onClick={() => { setTownFormMode('create'); setTownFormError('') }}
+                      className={`px-3 py-1.5 rounded-lg font-semibold ${townFormMode === 'create' ? 'bg-amber-100 text-amber-800' : 'text-slate-400'}`}
+                    >
+                      Create
+                    </button>
+                    <button
+                      onClick={() => { setTownFormMode('join'); setTownFormError('') }}
+                      className={`px-3 py-1.5 rounded-lg font-semibold ${townFormMode === 'join' ? 'bg-amber-100 text-amber-800' : 'text-slate-400'}`}
+                    >
+                      Join
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={townFormValue}
+                    onChange={e => setTownFormValue(townFormMode === 'join' ? e.target.value.toUpperCase().slice(0, 6) : e.target.value)}
+                    placeholder={townFormMode === 'create' ? 'Town name' : '6-digit code'}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    maxLength={townFormMode === 'join' ? 6 : 100}
+                  />
+                  {townFormError && <p className="text-xs text-red-600">{townFormError}</p>}
+                  <button
+                    onClick={handleTownFormSubmit}
+                    disabled={townFormLoading || !townFormValue.trim()}
+                    className="w-full py-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-white text-sm font-semibold rounded-lg"
+                  >
+                    {townFormLoading ? 'Please wait...' : townFormMode === 'create' ? 'Create Town' : 'Join Town'}
+                  </button>
+                </div>
+              )}
+            </div>
             <button onClick={signOut} className="w-full py-2.5 text-sm text-slate-500 hover:text-slate-700 border-t border-slate-100 pt-4">
               Sign Out
             </button>
