@@ -11,6 +11,8 @@ export interface StudentUser {
   link_code: string
   parent_id: string | null
   parent_display_name: string | null
+  town_id: string | null
+  reputation: number
 }
 
 export interface GuestSession {
