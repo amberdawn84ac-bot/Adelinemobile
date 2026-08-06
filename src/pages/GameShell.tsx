@@ -35,7 +35,7 @@ function parseAvatar(data: Record<string, unknown>): AvatarData | null {
 }
 
 export default function GameShell() {
-  const { user: activeChild, guestSession, signOut } = useAuth()
+  const { user: activeChild, guestSession, signOut, refreshUser } = useAuth()
   const navigate = useNavigate()
 
   const storedAvatar = activeChild?.avatar_data ? parseAvatar(activeChild.avatar_data as Record<string, unknown>) : null
@@ -62,6 +62,7 @@ export default function GameShell() {
   const [townFormValue, setTownFormValue] = useState('')
   const [townFormError, setTownFormError] = useState('')
   const [townFormLoading, setTownFormLoading] = useState(false)
+  const [townLoadFailed, setTownLoadFailed] = useState(false)
   const gradeBand = (activeChild?.grade_level ?? 'K-2') as GradeBand
 
   const playerName = activeChild?.display_name ?? guestSession?.displayName ?? 'Explorer'
@@ -77,10 +78,18 @@ export default function GameShell() {
   }, [activeChild])
 
   useEffect(() => {
-    if (overlay === 'settings' && activeChild?.town_id && !town) {
-      getTown(activeChild.town_id).then(setTown)
+    if (overlay === 'settings' && activeChild?.town_id && !town && !townLoadFailed) {
+      getTown(activeChild.town_id).then(result => {
+        if (result) setTown(result)
+        else setTownLoadFailed(true)
+      })
     }
-  }, [overlay, activeChild, town])
+  }, [overlay, activeChild, town, townLoadFailed])
+
+  useEffect(() => {
+    setTown(null)
+    setTownLoadFailed(false)
+  }, [activeChild?.id])
 
   async function saveAvatar(avatar: AvatarData) {
     setAvatarData(avatar)
@@ -110,9 +119,11 @@ export default function GameShell() {
         ? await createTown(townFormValue.trim())
         : await joinTown(townFormValue.trim().toUpperCase())
       if (!result) {
-        setTownFormError(townFormMode === 'create' ? 'Could not create town. Try again.' : 'Join code not found.')
+        setTownFormError(townFormMode === 'create' ? 'Could not create town. Try again.' : "That code didn't work. Check it and try again.")
       } else {
         setTown(result)
+        setTownFormValue('')
+        await refreshUser()
       }
     } finally {
       setTownFormLoading(false)
@@ -318,7 +329,7 @@ export default function GameShell() {
         <GraduationTracker entries={allEntries} gradeBand={gradeBand} studentName={playerName} onClose={() => setOverlay(null)} />
       )}
       {overlay === 'settings' && activeChild && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-6" onClick={() => setOverlay(null)}>
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-6" onClick={() => { setOverlay(null); setTownLoadFailed(false) }}>
           <div className="bg-white rounded-3xl shadow-xl p-6 max-w-sm w-full space-y-4" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-bold font-serif text-slate-800">Settings</h3>
             {activeChild.parent_id ? (
@@ -341,18 +352,22 @@ export default function GameShell() {
                   <p className="text-xs text-slate-400 font-mono">Join code: {town.join_code}</p>
                 </div>
               ) : activeChild.town_id ? (
-                <p className="text-xs text-slate-400">Loading town...</p>
+                townLoadFailed ? (
+                  <p className="text-xs text-red-600">Couldn't load your town right now.</p>
+                ) : (
+                  <p className="text-xs text-slate-400">Loading town...</p>
+                )
               ) : (
                 <div className="space-y-2">
                   <div className="flex gap-2 text-xs">
                     <button
-                      onClick={() => { setTownFormMode('create'); setTownFormError('') }}
+                      onClick={() => { setTownFormMode('create'); setTownFormError(''); setTownFormValue('') }}
                       className={`px-3 py-1.5 rounded-lg font-semibold ${townFormMode === 'create' ? 'bg-amber-100 text-amber-800' : 'text-slate-400'}`}
                     >
                       Create
                     </button>
                     <button
-                      onClick={() => { setTownFormMode('join'); setTownFormError('') }}
+                      onClick={() => { setTownFormMode('join'); setTownFormError(''); setTownFormValue('') }}
                       className={`px-3 py-1.5 rounded-lg font-semibold ${townFormMode === 'join' ? 'bg-amber-100 text-amber-800' : 'text-slate-400'}`}
                     >
                       Join
@@ -380,7 +395,7 @@ export default function GameShell() {
             <button onClick={signOut} className="w-full py-2.5 text-sm text-slate-500 hover:text-slate-700 border-t border-slate-100 pt-4">
               Sign Out
             </button>
-            <button onClick={() => setOverlay(null)} className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl">
+            <button onClick={() => { setOverlay(null); setTownLoadFailed(false) }} className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl">
               Close
             </button>
           </div>
