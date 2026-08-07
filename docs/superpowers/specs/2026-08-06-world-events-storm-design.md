@@ -167,9 +167,10 @@ GET /towns/{town_id}/storm
   → { phase: 'calm' | 'warning' | 'hit', cycle: int, days_until_hit: int,
       prep_count: int, prep_threshold: int, treasury: int }
 
-  Side effect: if the current cycle number is greater than `lastStormCycleEvaluated`
-  (regardless of the current phase — this covers the case where nobody opens the app
-  again until well after the storm has passed), evaluate the cycle that just ended:
+  Side effect: if (cycle - 1) is greater than `lastStormCycleEvaluated` — i.e. the
+  most recently completed cycle hasn't been evaluated yet — evaluate it (regardless
+  of the current phase — this covers the case where nobody opens the app again
+  until well after the storm has passed):
   if prep_count < prep_threshold, subtract a treasury penalty (flat amount, e.g. 50
   AdeCoins, floored at 0 via the same GREATEST(...,0) pattern already used
   elsewhere). Either way, reset prep_count to 0 and set lastStormCycleEvaluated to
