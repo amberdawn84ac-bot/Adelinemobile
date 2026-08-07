@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { AvatarData, DEFAULT_AVATAR, LifeMapEntry, Track, ActivityType, BuildingId, GradeBand, TOWN_BUILDINGS } from '../types/game'
+import { AvatarData, DEFAULT_AVATAR, LifeMapEntry, Track, ActivityType, BuildingId, GradeBand, TOWN_BUILDINGS, STORM_MISSIONS } from '../types/game'
 import AvatarBuilder from '../components/avatar/AvatarBuilder'
 import GameHUD from '../components/hud/GameHUD'
 import HubWorld from '../components/world/HubWorld'
@@ -10,7 +10,7 @@ import SeasonPass from '../components/season-pass/SeasonPass'
 import RoomMission from '../components/rooms/RoomMission'
 import AdelineKitchen from './AdelineKitchen'
 import BrainBattle from '../components/game/BrainBattle'
-import { updateStudentProfile, patchXP, patchCoins, getSeasonPass, patchSeasonPass, createTown, joinTown, getTown, Town } from '../lib/brainClient'
+import { updateStudentProfile, patchXP, patchCoins, getSeasonPass, patchSeasonPass, createTown, joinTown, getTown, Town, getTownStorm, postTownStormPrep, StormStatus } from '../lib/brainClient'
 import { logActivity, getLifeMap } from '../lib/lifeMapService'
 import GraduationTracker from '../components/graduation/GraduationTracker'
 import Portfolio from '../components/portfolio/Portfolio'
@@ -63,6 +63,7 @@ export default function GameShell() {
   const [townFormError, setTownFormError] = useState('')
   const [townFormLoading, setTownFormLoading] = useState(false)
   const [townLoadFailed, setTownLoadFailed] = useState(false)
+  const [stormStatus, setStormStatus] = useState<StormStatus | null>(null)
   const gradeBand = (activeChild?.grade_level ?? 'K-2') as GradeBand
 
   const playerName = activeChild?.display_name ?? guestSession?.displayName ?? 'Explorer'
@@ -90,6 +91,12 @@ export default function GameShell() {
     setTown(null)
     setTownLoadFailed(false)
   }, [activeChild?.id])
+
+  useEffect(() => {
+    if (activeChild?.town_id) {
+      getTownStorm(activeChild.town_id).then(setStormStatus)
+    }
+  }, [activeChild?.town_id])
 
   async function saveAvatar(avatar: AvatarData) {
     setAvatarData(avatar)
@@ -142,6 +149,9 @@ export default function GameShell() {
       const entry = await logActivity(activeChild.id, description, tracks, xp, coins, 'room_mission')
       if (entry) handleLifeMapEntry(entry)
     }
+    if (activeStormMission && activeChild?.town_id) {
+      postTownStormPrep(activeChild.town_id)
+    }
   }
 
   async function claimSeasonTier(tier: number, coinsToAdd: number) {
@@ -183,6 +193,10 @@ export default function GameShell() {
     ? (TOWN_BUILDINGS.find(b => b.id === currentBuilding)?.fallbackMissions[0]?.tracks ?? ['ENGLISH_LITERATURE'])
     : ['ENGLISH_LITERATURE']
   const resolvedTrack: Track = activityTrack ?? buildingFallbackTracks[0]
+
+  const activeStormMission = stormStatus?.phase === 'warning' && currentBuilding
+    ? STORM_MISSIONS[currentBuilding]?.[0]
+    : undefined
 
   const hudPlayer = activeChild ? { ...activeChild, xp: localXP, ade_coins: localCoins } : null
   const hudGuest = guestSession ? { ...guestSession, xp: localXP, adeCoins: localCoins } : null
@@ -266,6 +280,7 @@ export default function GameShell() {
             systemContext={activityTopic ?? `${activityMode} activity in ${buildingMeta.label}`}
             studentId={activeChild?.id ?? null}
             gradeBand={gradeBand}
+            stormMission={activeStormMission}
             onComplete={handleMissionComplete}
             onBack={exitToHub}
           />
@@ -306,6 +321,16 @@ export default function GameShell() {
         </button>
       </div>
       <div className="w-full h-full pt-16">
+        {stormStatus && stormStatus.phase === 'warning' && (
+          <div className="fixed top-3 left-1/2 -translate-x-1/2 z-30 bg-slate-800/90 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg backdrop-blur">
+            ⛈️ Storm in {stormStatus.days_until_hit} day{stormStatus.days_until_hit === 1 ? '' : 's'} — visit a building to help the town prepare
+          </div>
+        )}
+        {stormStatus && stormStatus.phase === 'hit' && (
+          <div className="fixed top-3 left-1/2 -translate-x-1/2 z-30 bg-emerald-700/90 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg backdrop-blur">
+            🌤️ The storm has passed. Rebuild and get ready for the next one.
+          </div>
+        )}
         <HubWorld
           avatarData={avatarData}
           playerName={playerName}
