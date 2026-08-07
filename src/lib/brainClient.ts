@@ -347,3 +347,25 @@ export async function patchTownTreasury(townId: string, delta: number): Promise<
   const result = await patch_<{ treasury: number }>(`/towns/${townId}/treasury`, { delta })
   return result?.treasury ?? null
 }
+
+// ── World Events: The Storm ─────────────────────────────────────────────────
+
+export interface StormStatus {
+  phase: 'calm' | 'warning' | 'hit'
+  cycle: number
+  days_until_hit: number
+  prep_count: number
+  prep_threshold: number
+  treasury: number
+}
+
+/** Fetch the current storm phase/countdown for a town. Returns null if unreachable. */
+export async function getTownStorm(townId: string): Promise<StormStatus | null> {
+  return get<StormStatus>(`/towns/${townId}/storm`)
+}
+
+/** Record that a town member completed a storm-prep mission. Returns the new prep count, or null on failure. */
+export async function postTownStormPrep(townId: string): Promise<number | null> {
+  const result = await post<{ prep_count: number }>(`/towns/${townId}/storm/prep`, {})
+  return result?.prep_count ?? null
+}
