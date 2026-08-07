@@ -27,7 +27,7 @@ interface Mission {
 }
 
 export default function RoomMission({
-  roomId, roomLabel, roomEmoji, roomTracks, playerName,
+  roomId, roomLabel, roomTracks, playerName,
   systemContext, studentId, gradeBand, stormMission, onComplete, onBack
 }: Props) {
   const [mission, setMission] = useState<Mission | null>(null)
@@ -36,7 +36,6 @@ export default function RoomMission({
   const [loading, setLoading] = useState(true)
   const [evaluating, setEvaluating] = useState(false)
   const [completed, setCompleted] = useState(false)
-  const [usedBrain, setUsedBrain] = useState(false)
 
   useEffect(() => { loadMission() }, [])
 
@@ -62,17 +61,15 @@ export default function RoomMission({
       if (lesson && lesson.blocks?.length > 0) {
         const descBlock = lesson.blocks.find(b => b.type === 'NARRATIVE' || b.type === 'TEXT') ?? lesson.blocks[0]
         const promptBlock = lesson.blocks.find(b => b.type === 'RESEARCH_MISSION' || b.type === 'LAB_MISSION')
-
         setMission({
           title: lesson.title,
           description: descBlock.content,
-          prompt: promptBlock?.content ?? `Based on what you just read about "${lesson.title}", share your thoughts or what you discovered. Write at least 2-3 sentences.`,
+          prompt: promptBlock?.content ?? `Based on what you found about “${lesson.title},” record what matters most and what you still want to know.`,
           xpReward: 75,
           coinReward: 18,
           lessonId: lesson.lesson_id,
           fromBrain: true,
         })
-        setUsedBrain(true)
         setLoading(false)
         return
       }
@@ -83,22 +80,14 @@ export default function RoomMission({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: `Create a real-world mission for a homeschool student in the ${roomLabel} subject area. ${systemContext}
-
-The mission should require a written response (not multiple choice) and connect to real life, homesteading, farming, nature, history, or their community. Be completable in 5-15 minutes.
-
-Respond ONLY with valid JSON:
-{"title":"...","description":"...what they'll do, 2-3 sentences...","prompt":"...the specific question or task they respond to...","xpReward":60,"coinReward":15}`,
+          message: `Create a grounded real-world discovery for a student who has entered ${roomLabel}. ${systemContext}\n\nIt must feel like something the student noticed, found, needs to solve, repair, investigate, compare, document, or decide. Do not call it a lesson, assignment, activity, challenge, or educational mission. Avoid praise language and classroom language. It should connect naturally to real life, homesteading, farming, nature, history, a town, or community and be completable in 5-15 minutes.\n\nRespond ONLY with valid JSON:\n{"title":"...","description":"...2-3 sentences setting up what was found or what is happening...","prompt":"...the concrete thing the player needs to work out or record...","xpReward":60,"coinReward":15}`,
           history: [],
         })
       })
       const data = await res.json()
       const parsed = JSON.parse(data.reply.replace(/\`\`\`json|\`\`\`/g, '').trim())
-      if (parsed.title && parsed.prompt) {
-        setMission({ ...parsed, fromBrain: false })
-      } else {
-        throw new Error('bad format')
-      }
+      if (parsed.title && parsed.prompt) setMission({ ...parsed, fromBrain: false })
+      else throw new Error('bad format')
     } catch {
       setMission(getFallbackMission(roomId))
     } finally {
@@ -114,12 +103,7 @@ Respond ONLY with valid JSON:
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: `A student named ${playerName} completed this mission:
-Mission: "${mission.title}"
-Task: "${mission.prompt}"
-Their response: "${response}"
-
-Evaluate in 2-3 sentences. Be encouraging but honest. End with one specific thing they did well.`,
+          message: `A student named ${playerName} investigated this situation:\nTitle: "${mission.title}"\nWhat they needed to work out: "${mission.prompt}"\nTheir field note: "${response}"\n\nRespond as a concise knowledgeable mentor, not a teacher grading homework. In 2-3 sentences, say what in their reasoning is supported, point out one thing that needs correction or deeper evidence if applicable, and give one useful next clue or question. Do not say great job, awesome, amazing, mission complete, or use motivational filler.`,
           history: [],
         })
       })
@@ -135,7 +119,7 @@ Evaluate in 2-3 sentences. Be encouraging but honest. End with one specific thin
         recordTranscriptCredit(studentId, mission.lessonId, roomTracks[0], mission.title)
       }
     } catch {
-      setFeedback("Great work completing this mission! Keep building on what you know.")
+      setFeedback('Your note has been saved. Revisit it later if new evidence changes what you think.')
       setCompleted(true)
       onComplete(response.slice(0, 120), roomTracks, mission?.xpReward ?? 40, mission?.coinReward ?? 10)
     } finally {
@@ -144,89 +128,77 @@ Evaluate in 2-3 sentences. Be encouraging but honest. End with one specific thin
   }
 
   return (
-    <div className="h-full flex flex-col bg-slate-900/95 text-white">
-      <div className="flex items-center gap-3 p-4 border-b border-white/10">
-        <button onClick={onBack} className="text-white/60 hover:text-white text-sm px-2 py-1 rounded-lg hover:bg-white/10">
-          ← Back
-        </button>
-        <span className="text-2xl">{roomEmoji}</span>
-        <div>
-          <h2 className="font-bold">{roomLabel} — Mission</h2>
-          <p className="text-white/50 text-xs">
-            {usedBrain ? '🧠 Adeline Brain · verified lesson' : 'Real work, real learning'}
-          </p>
-        </div>
-      </div>
+    <div className="relative h-full overflow-hidden bg-[#d8d0bc] text-[#2e2923]">
+      <div className="absolute inset-0 opacity-35" style={{ backgroundImage:'radial-gradient(#4b4134 .55px, transparent .7px)', backgroundSize:'5px 5px' }} />
+      <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[#234f50]/10 blur-3xl" />
+      <div className="absolute -left-24 bottom-[-90px] h-80 w-80 rounded-full bg-[#6c2e55]/10 blur-3xl" />
 
-      <div className="flex-1 flex flex-col items-center justify-center p-6 gap-5 overflow-y-auto">
-        {loading ? (
-          <div className="text-center space-y-3">
-            <div className="w-10 h-10 border-4 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-white/60 text-sm">
-              {studentId ? 'Adeline is finding your next lesson...' : 'Preparing your mission...'}
-            </p>
-          </div>
-        ) : mission && !completed ? (
-          <>
-            <div className="w-full max-w-lg bg-white/10 rounded-2xl p-5 border border-white/20 space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="text-amber-400 text-xs font-bold uppercase tracking-wider">Mission</span>
-                {mission.fromBrain && <span className="text-emerald-400 text-xs">✓ brain-verified</span>}
-                <div className="flex-1 h-px bg-white/20" />
-              </div>
-              <h3 className="text-white font-bold text-lg">{mission.title}</h3>
-              <p className="text-white/80 text-sm leading-relaxed">{mission.description}</p>
+      <button
+        onClick={onBack}
+        className="absolute left-4 top-4 z-30 rounded-full border border-[#3c342b]/20 bg-[#f4eddb]/90 px-4 py-2 font-serif text-xs shadow-md backdrop-blur"
+      >
+        ← town
+      </button>
+
+      <div className="relative z-10 h-full overflow-y-auto px-4 pb-10 pt-20 sm:px-8">
+        <div className="mx-auto max-w-3xl">
+          {loading ? (
+            <div className="mt-[16vh] text-center font-serif text-[#5a5044]">
+              <div className="mx-auto mb-5 h-10 w-10 rounded-full border border-[#3a3128]/30 bg-[#c69a38]/25 shadow-[0_0_30px_rgba(198,154,56,.24)] animate-pulse" />
+              <p className="text-sm italic">Something here is worth looking at…</p>
             </div>
+          ) : mission && !completed ? (
+            <div className="relative rounded-[28px_22px_30px_20px] border border-[#463b30]/25 bg-[#f3ecd9]/95 p-6 shadow-[0_22px_55px_rgba(55,44,32,.22)] sm:p-9">
+              <div className="absolute right-8 top-0 h-12 w-px rotate-[13deg] bg-[#6a5745]/20" />
+              <div className="absolute left-8 top-8 h-2 w-2 rounded-full bg-[#295d58] shadow-[0_0_12px_rgba(41,93,88,.45)]" />
+              <p className="mb-6 pl-5 font-serif text-[10px] uppercase tracking-[0.24em] text-[#766957]">field note · {roomLabel}</p>
 
-            <div className="w-full max-w-lg space-y-3">
-              <p className="text-white font-semibold text-sm">{mission.prompt}</p>
-              <textarea
-                value={response}
-                onChange={e => setResponse(e.target.value)}
-                placeholder="Write your response here... Take your time. There's no right answer — this is about YOUR thinking."
-                className="w-full h-40 px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white placeholder-white/30 text-sm resize-none focus:outline-none focus:border-amber-400"
-                autoFocus
-              />
-              <div className="flex items-center justify-between">
-                <span className="text-white/40 text-xs">{response.length} characters</span>
+              <h1 className="font-serif text-2xl leading-tight text-[#28231e] sm:text-3xl">{mission.title}</h1>
+              <p className="mt-4 max-w-2xl font-serif text-[15px] leading-7 text-[#51483e]">{mission.description}</p>
+
+              <div className="my-7 h-px bg-gradient-to-r from-transparent via-[#5c5043]/35 to-transparent" />
+
+              <p className="font-serif text-[15px] font-semibold leading-6 text-[#2f2a24]">{mission.prompt}</p>
+
+              <div className="relative mt-5">
+                <textarea
+                  value={response}
+                  onChange={e => setResponse(e.target.value)}
+                  placeholder="Write what you notice, calculate, decide, sketch in words, or still need to figure out…"
+                  className="h-44 w-full resize-none rounded-[18px_14px_20px_13px] border border-[#55483b]/25 bg-[#fffaf0]/65 px-4 py-4 font-serif text-sm leading-6 text-[#302a24] outline-none placeholder:text-[#877968] focus:border-[#295d58]/60 focus:ring-2 focus:ring-[#295d58]/10"
+                />
+                <span className="absolute bottom-3 right-4 font-serif text-[9px] text-[#877968]">field journal</span>
+              </div>
+
+              <div className="mt-5 flex items-center justify-end">
                 <button
                   onClick={submitResponse}
                   disabled={response.trim().length < 20 || evaluating}
-                  className="px-6 py-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-white font-bold rounded-xl transition-all"
+                  className="rounded-full border border-[#254c49]/30 bg-[#295d58] px-6 py-2.5 font-serif text-sm text-[#fff9eb] shadow-md transition hover:bg-[#214844] disabled:cursor-not-allowed disabled:opacity-35"
                 >
-                  {evaluating ? 'Adeline is reading...' : 'Submit Mission →'}
+                  {evaluating ? 'checking the evidence…' : 'save note'}
                 </button>
               </div>
-              {response.trim().length < 20 && response.length > 0 && (
-                <p className="text-white/40 text-xs">Write a bit more — at least 20 characters to submit.</p>
-              )}
             </div>
-            <p className="text-white/30 text-xs">+{mission.xpReward} XP · +{mission.coinReward} AdeCoins · Added to Life Map{mission.fromBrain ? ' + Transcript' : ''}</p>
-          </>
-        ) : completed && feedback ? (
-          <div className="w-full max-w-lg space-y-5">
-            <div className="bg-emerald-500/20 border border-emerald-400 rounded-2xl p-5 space-y-3">
-              <p className="text-4xl text-center">🎉</p>
-              <p className="text-emerald-300 font-bold text-center">Mission Complete!</p>
-              <p className="text-white/80 text-sm leading-relaxed">{feedback}</p>
-              <p className="text-amber-300 text-xs text-center">
-                +{mission?.xpReward} XP · +{mission?.coinReward} AdeCoins
-                {mission?.fromBrain ? ' · Transcript credit recorded' : ' · Added to Life Map'}
-              </p>
+          ) : completed && feedback ? (
+            <div className="relative rounded-[24px_30px_22px_28px] border border-[#463b30]/25 bg-[#f3ecd9]/95 p-6 shadow-[0_22px_55px_rgba(55,44,32,.22)] sm:p-9">
+              <p className="font-serif text-[10px] uppercase tracking-[0.24em] text-[#766957]">Adeline’s margin note</p>
+              <p className="mt-5 font-serif text-[16px] leading-7 text-[#3d362e]">{feedback}</p>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <button onClick={onBack} className="rounded-full border border-[#3f372e]/20 bg-[#fffaf0]/60 px-5 py-2.5 font-serif text-sm text-[#3c352d]">
+                  back outside
+                </button>
+                <button
+                  onClick={() => { setCompleted(false); setResponse(''); setFeedback(null); loadMission() }}
+                  className="rounded-full border border-[#5b2e50]/25 bg-[#6a355d] px-5 py-2.5 font-serif text-sm text-[#fff7ea] shadow-md"
+                >
+                  look around again
+                </button>
+              </div>
+              <p className="mt-7 font-serif text-[10px] italic text-[#847665]">Saved quietly to your learning record.</p>
             </div>
-            <div className="flex gap-3">
-              <button onClick={onBack} className="flex-1 py-3 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl">
-                ← Back to World
-              </button>
-              <button
-                onClick={() => { setCompleted(false); setResponse(''); setFeedback(null); loadMission() }}
-                className="flex-1 py-3 bg-amber-500 hover:bg-amber-400 text-white font-bold rounded-xl"
-              >
-                Next Mission →
-              </button>
-            </div>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
     </div>
   )
@@ -234,11 +206,12 @@ Evaluate in 2-3 sentences. Be encouraging but honest. End with one specific thin
 
 function getFallbackMission(roomId: string): Mission {
   const missions: Record<string, Mission> = {
-    math_mines:     { title: 'Budget Your Garden', description: 'Plan a small vegetable garden and figure out what it would cost to plant it.', prompt: "Pick 3 vegetables to grow. Estimate how many seeds or seedlings you need and what they might cost. How much space do you need? Write out your plan and calculations.", xpReward: 60, coinReward: 15 },
-    story_forest:   { title: 'Tell Your Story', description: "Every family has stories worth preserving.", prompt: "Write 3-5 sentences about a real event in your family's history or something that happened recently. Include who was there, what happened, and why it matters.", xpReward: 60, coinReward: 15 },
-    science_lab:    { title: 'Kitchen Science Observation', description: 'Science is everywhere in your home.', prompt: "Choose one and describe what you observe: (1) What happens when you mix baking soda and vinegar? (2) How does bread dough rise? (3) What do you notice about how water moves through soil? Write what you observe and why you think it happens.", xpReward: 60, coinReward: 15 },
-    homestead_farm: { title: 'Animal Care Log', description: 'Taking care of animals is real science, math, and stewardship all at once.', prompt: "Think about an animal your family cares for. What does it eat? How much? How do you keep it healthy? What does it give back to the family? Write a short care guide for it.", xpReward: 65, coinReward: 18 },
-    truth_archive:  { title: 'Follow the Money', description: "Behind almost every historical event, there is someone who profits.", prompt: "Pick one: (1) Why did Columbus sail west? (2) Why did factories replace farms in the 1800s? (3) Why do food companies add sugar to almost everything? Write 3-5 sentences about who benefited and how.", xpReward: 70, coinReward: 18 },
+    the_library: { title: 'A Margin That Shouldn’t Be Here', description: 'An old local-history book has a penciled note in the margin that disagrees with the printed account. The note names a family, a date, and a payment that the book never mentions.', prompt: 'What would you need to verify before trusting the handwritten note? List at least three pieces of evidence you would look for and explain which would be strongest.', xpReward: 60, coinReward: 15 },
+    the_arena: { title: 'The Numbers Don’t Match', description: 'Two town notices give different totals for the same project. One says the materials cost $480. Another lists twelve identical items at $37.50 each plus a $45 delivery charge.', prompt: 'Work out the second total. Does either notice appear wrong? Record your calculation and what you would check next.', xpReward: 60, coinReward: 15 },
+    the_makers_lab: { title: 'The Crooked Gate', description: 'The old garden gate drags across the ground every time it opens. One hinge is loose and the diagonal brace has shifted.', prompt: 'Describe how you would diagnose what is causing the sag. What measurements or simple tests would tell you whether the hinge, frame, or brace is the main problem?', xpReward: 65, coinReward: 18 },
+    the_creek_and_woods: { title: 'Something Changed Upstream', description: 'The water below the footbridge is cloudier than it was yesterday, and a thin line of debris is caught high on the bank.', prompt: 'What are three possible explanations? What observations could help you tell runoff, erosion, flooding, or pollution apart?', xpReward: 65, coinReward: 18 },
+    the_market: { title: 'Why Did the Price Jump?', description: 'A jar of local honey is suddenly several dollars more expensive, even though the jar size has not changed. The beekeeper, shopkeeper, and customer each give a different explanation.', prompt: 'List the costs or market changes that could reasonably raise the price. Which explanation would you investigate first, and what information would you ask for?', xpReward: 70, coinReward: 18 },
+    the_chapel: { title: 'A Verse in the Margin', description: 'A worn Bible on a side table has one passage underlined twice, with a date written beside it. There is no explanation.', prompt: 'Read the passage carefully in context. Record what it actually says, what it does not say, and one question you would ask before assuming why it mattered to the person who marked it.', xpReward: 60, coinReward: 15 },
   }
-  return missions[roomId] ?? missions.math_mines
+  return missions[roomId] ?? { title:'An Unfinished Note', description:'Someone left a page here with one important piece missing.', prompt:'What can you infer from what is present, and what evidence would you need before drawing a conclusion?', xpReward:50, coinReward:12 }
 }
