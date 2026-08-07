@@ -323,6 +323,122 @@ export const TOWN_BUILDINGS: TownBuilding[] = [
   },
 ]
 
+// World Events: The Storm. Hand-authored storm-prep content per building,
+// swapped in for that building's normal missions during the storm's warning
+// window. See docs/superpowers/specs/2026-08-06-world-events-storm-design.md.
+export const STORM_MISSIONS: Record<BuildingId, FallbackMission[]> = {
+  adelines_kitchen: [
+    {
+      title: 'Stock the Pantry',
+      description: 'A storm is coming. Help Adeline figure out what the town needs before it hits.',
+      prompt: 'List what a family needs to have on hand before a storm: food, water, and one more thing. How much water does one person need per day? Show your math.',
+      tracks: ['HOMESTEADING', 'APPLIED_MATHEMATICS'],
+      xpReward: 70,
+      coinReward: 18,
+    },
+  ],
+  the_library: [
+    {
+      title: 'Storm Warning Notice',
+      description: 'The town needs a clear, calm warning notice posted before the storm arrives.',
+      prompt: 'Write a short storm warning notice for the town. What do people need to know? What should they do first, second, third?',
+      tracks: ['ENGLISH_LITERATURE'],
+      xpReward: 70,
+      coinReward: 18,
+    },
+    {
+      title: 'Before Radar',
+      description: 'Long before weather satellites, people still had to know a storm was coming.',
+      prompt: 'How did people predict or prepare for storms before modern forecasting? Pick one method (animal behavior, cloud patterns, barometers, etc.) and explain how it worked.',
+      tracks: ['TRUTH_HISTORY'],
+      xpReward: 70,
+      coinReward: 18,
+    },
+  ],
+  the_arena: [
+    {
+      title: 'Water for the Storm',
+      description: 'Emergency planning starts with numbers.',
+      prompt: 'A family of 4 needs to prepare for 3 days without clean water. If each person needs 1 gallon per day, how much water does the family need total? Show your work.',
+      tracks: ['APPLIED_MATHEMATICS'],
+      xpReward: 70,
+      coinReward: 18,
+    },
+    {
+      title: 'Reading the Sky',
+      description: 'Falling air pressure is one of the clearest signs a storm is coming.',
+      prompt: 'Explain what barometric pressure is and why it drops before a storm. If you had a barometer, what reading would worry you?',
+      tracks: ['CREATION_SCIENCE'],
+      xpReward: 70,
+      coinReward: 18,
+    },
+  ],
+  the_makers_lab: [
+    {
+      title: 'Brace for Impact',
+      description: "A structure that isn't braced for wind can come apart fast.",
+      prompt: 'Design a simple way to brace a small shed or greenhouse against high wind. What shape resists wind best? Sketch or describe your bracing and explain why it works.',
+      tracks: ['APPLIED_MATHEMATICS', 'CREATION_SCIENCE'],
+      xpReward: 70,
+      coinReward: 18,
+    },
+  ],
+  the_creek_and_woods: [
+    {
+      title: 'Protect the Herd',
+      description: "Animals and gardens can't take shelter on their own — that's up to you.",
+      prompt: "Make a storm plan for an animal and a garden bed: where do they go, what do you check on first, and what could go wrong if you wait too long?",
+      tracks: ['HOMESTEADING'],
+      xpReward: 70,
+      coinReward: 18,
+    },
+    {
+      title: 'When the Power Goes Out',
+      description: 'Storms knock out power. Sometimes they cause injuries too.',
+      prompt: "Name one common storm-related injury and how you'd treat it with no power and no hospital nearby. What natural remedies or basic first aid would you use?",
+      tracks: ['HEALTH_NATUROPATHY'],
+      xpReward: 70,
+      coinReward: 18,
+    },
+  ],
+  the_market: [
+    {
+      title: 'Price of Fear',
+      description: 'Right before the storm, plywood prices at the market suddenly tripled.',
+      prompt: "Is it fair for a seller to triple prices right before a storm? Explain both sides — the seller's and the buyer's — then say what you'd do if you ran the market.",
+      tracks: ['CREATIVE_ECONOMY', 'GOVERNMENT_ECONOMICS'],
+      xpReward: 70,
+      coinReward: 18,
+    },
+    {
+      title: 'Storm Budget',
+      description: 'Emergency supplies cost real money.',
+      prompt: "You have 40 AdeCoins to spend on storm supplies. List what you'd buy and how much of your budget each item takes. What would you cut if the price went up?",
+      tracks: ['APPLIED_MATHEMATICS'],
+      xpReward: 70,
+      coinReward: 18,
+    },
+  ],
+  the_chapel: [
+    {
+      title: 'Fear Not',
+      description: 'Storms are frightening. Faith has something to say about fear.',
+      prompt: 'Find or recall a Bible verse about fear or trusting God in hard times. Write it out and explain what it means to you right before something scary happens.',
+      tracks: ['DISCIPLESHIP'],
+      xpReward: 70,
+      coinReward: 18,
+    },
+    {
+      title: 'Write Your Storm',
+      description: 'Everyone has faced something that scared them.',
+      prompt: "Write about a time you were scared and how you got through it. What helped? What would you tell someone else going through something scary right now?",
+      tracks: ['ENGLISH_LITERATURE'],
+      xpReward: 70,
+      coinReward: 18,
+    },
+  ],
+}
+
 export type Track =
   | 'CREATION_SCIENCE'
   | 'HEALTH_NATUROPATHY'
