@@ -20,13 +20,13 @@ type GameScreen = 'avatar_builder' | 'hub' | 'mission' | 'brain_battle' | 'kitch
 type Overlay = 'life_map' | 'season_pass' | 'graduation' | 'portfolio' | 'settings' | null
 
 const BUILDING_META: Record<BuildingId, { label: string; emoji: string }> = {
-  adelines_kitchen:    { label: "Adeline's Kitchen", emoji: '🏡' },
-  the_library:         { label: 'The Library',        emoji: '📚' },
-  the_arena:           { label: 'The Arena',          emoji: '⚔️' },
-  the_makers_lab:      { label: "The Maker's Lab",    emoji: '🔧' },
-  the_creek_and_woods: { label: 'The Creek & Woods',  emoji: '🌿' },
-  the_market:          { label: 'The Market',         emoji: '🛒' },
-  the_chapel:          { label: 'The Chapel',         emoji: '✝️' },
+  adelines_kitchen:    { label: "Adeline's Kitchen", emoji: '' },
+  the_library:         { label: 'The Library',        emoji: '' },
+  the_arena:           { label: 'The Old Hall',       emoji: '' },
+  the_makers_lab:      { label: "The Workshop",       emoji: '' },
+  the_creek_and_woods: { label: 'Creek & Woods',      emoji: '' },
+  the_market:          { label: 'Main Street Market', emoji: '' },
+  the_chapel:          { label: 'The Chapel',         emoji: '' },
 }
 
 function parseAvatar(data: Record<string, unknown>): AvatarData | null {
@@ -53,6 +53,7 @@ export default function GameShell() {
   const [localXP, setLocalXP] = useState(activeChild?.xp ?? guestSession?.xp ?? 0)
   const [localCoins, setLocalCoins] = useState(activeChild?.ade_coins ?? guestSession?.adeCoins ?? 0)
   const [overlay, setOverlay] = useState<Overlay>(null)
+  const [journalOpen, setJournalOpen] = useState(false)
   const [lifeMapEntries, setLifeMapEntries] = useState<LifeMapEntry[]>([])
   const [claimedTiers, setClaimedTiers] = useState<number[]>([])
   const [allEntries, setAllEntries] = useState<LifeMapEntry[]>([])
@@ -69,9 +70,7 @@ export default function GameShell() {
   const playerName = activeChild?.display_name ?? guestSession?.displayName ?? 'Explorer'
 
   useEffect(() => {
-    if (activeChild) {
-      getSeasonPass(activeChild.id).then(setClaimedTiers)
-    }
+    if (activeChild) getSeasonPass(activeChild.id).then(setClaimedTiers)
   }, [activeChild])
 
   useEffect(() => {
@@ -93,9 +92,7 @@ export default function GameShell() {
   }, [activeChild?.id])
 
   useEffect(() => {
-    if (activeChild?.town_id) {
-      getTownStorm(activeChild.town_id).then(setStormStatus)
-    }
+    if (activeChild?.town_id) getTownStorm(activeChild.town_id).then(setStormStatus)
   }, [activeChild?.town_id])
 
   async function saveAvatar(avatar: AvatarData) {
@@ -149,26 +146,17 @@ export default function GameShell() {
       const entry = await logActivity(activeChild.id, description, tracks, xp, coins, 'room_mission')
       if (entry) handleLifeMapEntry(entry)
     }
-    if (activeStormMission && activeChild?.town_id) {
-      postTownStormPrep(activeChild.town_id)
-    }
+    if (activeStormMission && activeChild?.town_id) postTownStormPrep(activeChild.town_id)
   }
 
   async function claimSeasonTier(tier: number, coinsToAdd: number) {
     const newClaimed = [...claimedTiers, tier]
     setClaimedTiers(newClaimed)
     if (coinsToAdd > 0) addCoins(coinsToAdd)
-    if (activeChild) {
-      await patchSeasonPass(activeChild.id, newClaimed)
-    }
+    if (activeChild) await patchSeasonPass(activeChild.id, newClaimed)
   }
 
-  const enterBuilding = useCallback((
-    buildingId: BuildingId,
-    mode: ActivityType,
-    track: Track | null,
-    topic: string | null
-  ) => {
+  const enterBuilding = useCallback((buildingId: BuildingId, mode: ActivityType, track: Track | null, topic: string | null) => {
     setCurrentBuilding(buildingId)
     setActivityMode(mode)
     setActivityTrack(track)
@@ -186,95 +174,58 @@ export default function GameShell() {
     setScreen('hub')
   }
 
-  const buildingMeta = currentBuilding ? BUILDING_META[currentBuilding] : null
+  function openJournalPage(page: Exclude<Overlay, null>) {
+    setJournalOpen(false)
+    setOverlay(page)
+  }
 
-  // Resolve track: use brain-provided track, or fall back to first track from building config
+  const buildingMeta = currentBuilding ? BUILDING_META[currentBuilding] : null
   const buildingFallbackTracks: Track[] = currentBuilding
     ? (TOWN_BUILDINGS.find(b => b.id === currentBuilding)?.fallbackMissions[0]?.tracks ?? ['ENGLISH_LITERATURE'])
     : ['ENGLISH_LITERATURE']
   const resolvedTrack: Track = activityTrack ?? buildingFallbackTracks[0]
-
-  const activeStormMission = stormStatus?.phase === 'warning' && currentBuilding
-    ? STORM_MISSIONS[currentBuilding]?.[0]
-    : undefined
-
+  const activeStormMission = stormStatus?.phase === 'warning' && currentBuilding ? STORM_MISSIONS[currentBuilding]?.[0] : undefined
   const hudPlayer = activeChild ? { ...activeChild, xp: localXP, ade_coins: localCoins } : null
   const hudGuest = guestSession ? { ...guestSession, xp: localXP, adeCoins: localCoins } : null
 
-  // ── Avatar Builder ──
   if (screen === 'avatar_builder') {
-    return (
-      <AvatarBuilder
-        initialAvatar={storedAvatar ?? guestAvatar ?? undefined}
-        playerName={playerName}
-        onSave={saveAvatar}
-      />
-    )
+    return <AvatarBuilder initialAvatar={storedAvatar ?? guestAvatar ?? undefined} playerName={playerName} onSave={saveAvatar} />
   }
 
-  // ── Adeline's Kitchen ──
   if (screen === 'kitchen') {
     return (
-      <div className="w-screen h-screen overflow-hidden relative">
-        <GameHUD
-          player={hudPlayer}
-          guestSession={hudGuest}
-          avatarData={avatarData}
-          roomLabel="🏡 Adeline's Kitchen"
-          onExitRoom={exitToHub}
-          onSignOut={handleSignOut}
-        />
-        <div className="w-full h-full pt-16">
-          <AdelineKitchen
-            studentId={activeChild?.id ?? null}
-            playerName={playerName}
-            gradeBand={gradeBand}
-            onBack={exitToHub}
-          />
+      <div className="relative h-screen w-screen overflow-hidden">
+        <GameHUD player={hudPlayer} guestSession={hudGuest} avatarData={avatarData} roomLabel="Adeline's Kitchen" onExitRoom={exitToHub} onSignOut={handleSignOut} />
+        <div className="h-full w-full pt-16">
+          <AdelineKitchen studentId={activeChild?.id ?? null} playerName={playerName} gradeBand={gradeBand} onBack={exitToHub} />
         </div>
       </div>
     )
   }
 
-  // ── Brain Battle mini-game ──
   if (screen === 'brain_battle' && currentBuilding) {
     return (
-      <div className="w-screen h-screen overflow-hidden relative">
-        <div className="w-full h-full">
-          <BrainBattle
-            studentId={activeChild?.id ?? null}
-            track={resolvedTrack}
-            gradeBand={gradeBand}
-            playerName={playerName}
-            onComplete={(xp, coins) => {
-              addXP(xp)
-              addCoins(coins)
-              exitToHub()
-            }}
-            onBack={exitToHub}
-          />
-        </div>
+      <div className="relative h-screen w-screen overflow-hidden">
+        <BrainBattle
+          studentId={activeChild?.id ?? null}
+          track={resolvedTrack}
+          gradeBand={gradeBand}
+          playerName={playerName}
+          onComplete={(xp, coins) => { addXP(xp); addCoins(coins); exitToHub() }}
+          onBack={exitToHub}
+        />
       </div>
     )
   }
 
-  // ── Mission view ──
   if (screen === 'mission' && currentBuilding && buildingMeta) {
     return (
-      <div className="w-screen h-screen overflow-hidden relative">
-        <GameHUD
-          player={hudPlayer}
-          guestSession={hudGuest}
-          avatarData={avatarData}
-          roomLabel={`${buildingMeta.emoji} ${buildingMeta.label}`}
-          onExitRoom={exitToHub}
-          onSignOut={handleSignOut}
-        />
-        <div className="w-full h-full pt-16">
+      <div className="relative h-screen w-screen overflow-hidden">
+        <div className="h-full w-full">
           <RoomMission
             roomId={currentBuilding}
             roomLabel={buildingMeta.label}
-            roomEmoji={buildingMeta.emoji}
+            roomEmoji=""
             roomTracks={[resolvedTrack]}
             playerName={playerName}
             systemContext={activityTopic ?? `${activityMode} activity in ${buildingMeta.label}`}
@@ -289,48 +240,20 @@ export default function GameShell() {
     )
   }
 
-  // ── Hub World ──
   return (
-    <div className="w-screen h-screen overflow-hidden relative">
-      <GameHUD
-        player={hudPlayer}
-        guestSession={hudGuest}
-        avatarData={avatarData}
-        onSignOut={handleSignOut}
-      />
-      <div className="fixed top-16 right-3 z-40 flex flex-col gap-1.5 pointer-events-auto">
-        <button onClick={() => setOverlay('life_map')}
-          className="bg-violet-600/90 hover:bg-violet-500 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-xl shadow backdrop-blur transition-all">
-          🗺️ Life Map
-        </button>
-        <button onClick={() => setOverlay('season_pass')}
-          className="bg-amber-600/90 hover:bg-amber-500 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-xl shadow backdrop-blur transition-all">
-          🌟 Pass
-        </button>
-        <button onClick={() => setOverlay('graduation')}
-          className="bg-emerald-600/90 hover:bg-emerald-500 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-xl shadow backdrop-blur transition-all">
-          🎓 Path
-        </button>
-        <button onClick={() => setOverlay('portfolio')}
-          className="bg-blue-600/90 hover:bg-blue-500 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-xl shadow backdrop-blur transition-all">
-          📁 Portfolio
-        </button>
-        <button onClick={() => setOverlay('settings')}
-          className="bg-slate-600/90 hover:bg-slate-500 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-xl shadow backdrop-blur transition-all">
-          ⚙️ Settings
-        </button>
-      </div>
-      <div className="w-full h-full pt-16">
-        {stormStatus && stormStatus.phase === 'warning' && (
-          <div className="fixed top-3 left-1/2 -translate-x-1/2 z-30 bg-slate-800/90 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg backdrop-blur">
-            ⛈️ Storm in {stormStatus.days_until_hit} day{stormStatus.days_until_hit === 1 ? '' : 's'} — visit a building to help the town prepare
+    <div className="relative h-screen w-screen overflow-hidden">
+      <GameHUD player={hudPlayer} guestSession={hudGuest} avatarData={avatarData} onSignOut={handleSignOut} />
+
+      <div className="h-full w-full pt-16">
+        {stormStatus?.phase === 'warning' && (
+          <div className="pointer-events-none fixed left-1/2 top-[66px] z-30 -translate-x-1/2 rotate-[-1deg] rounded-sm border border-[#3a3128]/15 bg-[#efe7d4]/85 px-4 py-2 font-serif text-[10px] italic tracking-wide text-[#51473c] shadow-md backdrop-blur">
+            barometer falling · {stormStatus.days_until_hit} day{stormStatus.days_until_hit === 1 ? '' : 's'}
           </div>
         )}
-        {stormStatus && stormStatus.phase === 'hit' && (
-          <div className="fixed top-3 left-1/2 -translate-x-1/2 z-30 bg-emerald-700/90 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg backdrop-blur">
-            🌤️ The storm has passed. Rebuild and get ready for the next one.
-          </div>
+        {stormStatus?.phase === 'hit' && (
+          <div className="pointer-events-none fixed inset-0 z-20 bg-[#34434a]/12 backdrop-brightness-[.86]" />
         )}
+
         <HubWorld
           avatarData={avatarData}
           playerName={playerName}
@@ -344,106 +267,95 @@ export default function GameShell() {
         />
       </div>
 
-      {overlay === 'life_map' && (
-        <LifeMap studentId={activeChild?.id ?? null} localEntries={lifeMapEntries} onClose={() => setOverlay(null)} />
+      <button
+        onClick={() => setJournalOpen(v => !v)}
+        className="fixed right-4 top-[74px] z-40 rotate-[1deg] rounded-[6px_10px_7px_9px] border border-[#382f27]/25 bg-[#eadfc8]/95 px-3 py-2 font-serif text-[11px] text-[#3d352c] shadow-lg"
+      >
+        journal
+      </button>
+
+      {journalOpen && (
+        <div className="fixed right-4 top-[114px] z-40 w-44 rotate-[-.5deg] rounded-[14px_9px_16px_8px] border border-[#3a3027]/25 bg-[#f3ead6]/95 p-2 shadow-2xl backdrop-blur">
+          <p className="px-2 pb-2 pt-1 font-serif text-[9px] uppercase tracking-[.2em] text-[#746758]">inside cover</p>
+          <JournalLink label="field notes" onClick={() => openJournalPage('life_map')} />
+          <JournalLink label="keepsakes" onClick={() => openJournalPage('season_pass')} />
+          <JournalLink label="long road" onClick={() => openJournalPage('graduation')} />
+          <JournalLink label="things I made" onClick={() => openJournalPage('portfolio')} />
+          <div className="my-1 h-px bg-[#44392f]/15" />
+          <JournalLink label="town & account" onClick={() => openJournalPage('settings')} />
+        </div>
       )}
-      {overlay === 'season_pass' && (
-        <SeasonPass currentXP={localXP} claimedTiers={claimedTiers} onClaimTier={claimSeasonTier} onClose={() => setOverlay(null)} />
-      )}
-      {overlay === 'graduation' && (
-        <GraduationTracker entries={allEntries} gradeBand={gradeBand} studentName={playerName} onClose={() => setOverlay(null)} />
-      )}
+
+      {overlay === 'life_map' && <LifeMap studentId={activeChild?.id ?? null} localEntries={lifeMapEntries} onClose={() => setOverlay(null)} />}
+      {overlay === 'season_pass' && <SeasonPass currentXP={localXP} claimedTiers={claimedTiers} onClaimTier={claimSeasonTier} onClose={() => setOverlay(null)} />}
+      {overlay === 'graduation' && <GraduationTracker entries={allEntries} gradeBand={gradeBand} studentName={playerName} onClose={() => setOverlay(null)} />}
+
       {overlay === 'settings' && activeChild && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-6" onClick={() => { setOverlay(null); setTownLoadFailed(false) }}>
-          <div className="bg-white rounded-3xl shadow-xl p-6 max-w-sm w-full space-y-4" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-bold font-serif text-slate-800">Settings</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#241f1a]/45 p-6" onClick={() => { setOverlay(null); setTownLoadFailed(false) }}>
+          <div className="w-full max-w-sm space-y-4 rounded-[24px_18px_28px_20px] border border-[#42372e]/20 bg-[#f3ead6] p-6 font-serif text-[#3b332b] shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg">Town & account</h3>
             {activeChild.parent_id ? (
-              <p className="text-sm text-slate-600">Linked to {activeChild.parent_display_name ?? 'a parent'}.</p>
+              <p className="text-sm text-[#675b4e]">Linked to {activeChild.parent_display_name ?? 'a parent'}.</p>
             ) : (
               <div className="space-y-2">
-                <p className="text-sm text-slate-600">Link with a parent</p>
-                <p className="text-2xl font-mono font-bold tracking-widest text-amber-700 text-center bg-amber-50 rounded-xl py-3">
-                  {activeChild.link_code}
-                </p>
-                <p className="text-xs text-slate-400">Give this code to your parent to link accounts on the desktop app.</p>
+                <p className="text-sm text-[#675b4e]">Parent link code</p>
+                <p className="rounded-xl bg-[#e7d9bd] py-3 text-center font-mono text-2xl font-bold tracking-widest text-[#765128]">{activeChild.link_code}</p>
+                <p className="text-xs text-[#867764]">A parent can use this code on Dear Adeline to link the accounts.</p>
               </div>
             )}
-            <div className="border-t border-slate-100 pt-4 space-y-2">
-              <p className="text-sm font-semibold text-slate-700">Your Town</p>
+
+            <div className="space-y-2 border-t border-[#44392f]/15 pt-4">
+              <p className="text-sm font-semibold">Your town</p>
               {activeChild.town_id && town ? (
-                <div className="space-y-1">
-                  <p className="text-sm text-slate-600">{town.name}</p>
-                  <p className="text-xs text-slate-400">{town.members.length} member{town.members.length === 1 ? '' : 's'} · {town.treasury} AdeCoins in the treasury</p>
-                  <p className="text-xs text-slate-400 font-mono">Join code: {town.join_code}</p>
+                <div className="space-y-1 text-sm text-[#675b4e]">
+                  <p>{town.name}</p>
+                  <p className="text-xs">{town.members.length} member{town.members.length === 1 ? '' : 's'} · treasury {town.treasury}</p>
+                  <p className="font-mono text-xs">join code {town.join_code}</p>
                 </div>
               ) : activeChild.town_id ? (
-                townLoadFailed ? (
-                  <p className="text-xs text-red-600">Couldn't load your town right now.</p>
-                ) : (
-                  <p className="text-xs text-slate-400">Loading town...</p>
-                )
+                townLoadFailed ? <p className="text-xs text-[#8b4038]">Couldn’t load the town.</p> : <p className="text-xs text-[#867764]">Looking up the town…</p>
               ) : (
                 <div className="space-y-2">
                   <div className="flex gap-2 text-xs">
-                    <button
-                      onClick={() => { setTownFormMode('create'); setTownFormError(''); setTownFormValue('') }}
-                      className={`px-3 py-1.5 rounded-lg font-semibold ${townFormMode === 'create' ? 'bg-amber-100 text-amber-800' : 'text-slate-400'}`}
-                    >
-                      Create
-                    </button>
-                    <button
-                      onClick={() => { setTownFormMode('join'); setTownFormError(''); setTownFormValue('') }}
-                      className={`px-3 py-1.5 rounded-lg font-semibold ${townFormMode === 'join' ? 'bg-amber-100 text-amber-800' : 'text-slate-400'}`}
-                    >
-                      Join
-                    </button>
+                    <button onClick={() => { setTownFormMode('create'); setTownFormError(''); setTownFormValue('') }} className={`rounded-full px-3 py-1.5 ${townFormMode === 'create' ? 'bg-[#d8c49d] text-[#3f352b]' : 'text-[#8a7b68]'}`}>start one</button>
+                    <button onClick={() => { setTownFormMode('join'); setTownFormError(''); setTownFormValue('') }} className={`rounded-full px-3 py-1.5 ${townFormMode === 'join' ? 'bg-[#d8c49d] text-[#3f352b]' : 'text-[#8a7b68]'}`}>join one</button>
                   </div>
                   <input
                     type="text"
                     value={townFormValue}
                     onChange={e => setTownFormValue(townFormMode === 'join' ? e.target.value.toUpperCase().slice(0, 6) : e.target.value)}
-                    placeholder={townFormMode === 'create' ? 'Town name' : '6-digit code'}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    placeholder={townFormMode === 'create' ? 'town name' : '6-digit code'}
+                    className="w-full rounded-lg border border-[#44392f]/20 bg-[#fff9eb]/60 px-3 py-2 text-sm outline-none"
                     maxLength={townFormMode === 'join' ? 6 : 100}
                   />
-                  {townFormError && <p className="text-xs text-red-600">{townFormError}</p>}
-                  <button
-                    onClick={handleTownFormSubmit}
-                    disabled={townFormLoading || !townFormValue.trim()}
-                    className="w-full py-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-white text-sm font-semibold rounded-lg"
-                  >
-                    {townFormLoading ? 'Please wait...' : townFormMode === 'create' ? 'Create Town' : 'Join Town'}
+                  {townFormError && <p className="text-xs text-[#8b4038]">{townFormError}</p>}
+                  <button onClick={handleTownFormSubmit} disabled={townFormLoading || !townFormValue.trim()} className="w-full rounded-full bg-[#315d58] py-2 text-sm text-[#fff7e9] disabled:opacity-40">
+                    {townFormLoading ? 'one moment…' : townFormMode === 'create' ? 'start town' : 'join town'}
                   </button>
                 </div>
               )}
             </div>
-            <button onClick={signOut} className="w-full py-2.5 text-sm text-slate-500 hover:text-slate-700 border-t border-slate-100 pt-4">
-              Sign Out
-            </button>
-            <button onClick={() => { setOverlay(null); setTownLoadFailed(false) }} className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl">
-              Close
-            </button>
+
+            <button onClick={handleSignOut} className="w-full border-t border-[#44392f]/15 pt-4 text-sm text-[#756858]">sign out</button>
+            <button onClick={() => { setOverlay(null); setTownLoadFailed(false) }} className="w-full rounded-full bg-[#e2d5bc] py-2.5 text-sm">close</button>
           </div>
         </div>
       )}
+
       {overlay === 'portfolio' && (
-        <Portfolio
-          entries={allEntries}
-          studentName={playerName}
-          gradeBand={gradeBand}
-          onClose={() => setOverlay(null)}
-          onExport={() => { setOverlay(null); setShowTranscript(true) }}
-        />
+        <Portfolio entries={allEntries} studentName={playerName} gradeBand={gradeBand} onClose={() => setOverlay(null)} onExport={() => { setOverlay(null); setShowTranscript(true) }} />
       )}
       {showTranscript && (
-        <Transcript
-          entries={allEntries}
-          studentName={playerName}
-          gradeBand={gradeBand}
-          parentName={activeChild?.parent_display_name ?? 'Parent'}
-          onClose={() => setShowTranscript(false)}
-        />
+        <Transcript entries={allEntries} studentName={playerName} gradeBand={gradeBand} parentName={activeChild?.parent_display_name ?? 'Parent'} onClose={() => setShowTranscript(false)} />
       )}
     </div>
+  )
+}
+
+function JournalLink({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="w-full rounded-lg px-3 py-2 text-left font-serif text-[12px] text-[#453c32] transition hover:bg-[#dfd1b5]/70">
+      {label}
+    </button>
   )
 }
