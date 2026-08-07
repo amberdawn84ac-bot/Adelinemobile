@@ -14,47 +14,44 @@ interface Props {
 
 export default function GameHUD({ player, guestSession, avatarData, roomLabel, onExitRoom, onSignOut }: Props) {
   const name = player?.display_name ?? guestSession?.displayName ?? 'Explorer'
-  const xp = player?.xp ?? guestSession?.xp ?? 0
   const coins = player?.ade_coins ?? guestSession?.adeCoins ?? 0
-  const xpMax = 500
-  const xpPct = Math.min(100, Math.round((xp % xpMax) / xpMax * 100))
 
   return (
     <div className="fixed top-0 left-0 right-0 z-50 pointer-events-none">
       <div className="flex items-start justify-between p-3 gap-3">
-        <div className="bg-black/70 backdrop-blur rounded-2xl px-3 py-2 flex items-center gap-3 pointer-events-auto">
-          <AvatarRenderer avatar={avatarData} size={36} />
-          <div>
-            <p className="text-white font-bold text-sm leading-tight">{name}</p>
-            <div className="flex items-center gap-2 mt-0.5">
-              <div className="w-20 h-2 bg-white/20 rounded-full overflow-hidden">
-                <div className="h-full bg-amber-400 rounded-full transition-all duration-500" style={{ width: `${xpPct}%` }} />
-              </div>
-              <span className="text-amber-300 text-xs font-semibold">{xp} XP</span>
-            </div>
+        <div
+          className="pointer-events-auto flex items-center gap-2.5 rounded-full pl-1.5 pr-3 py-1.5 border border-[#2f2a23]/15 shadow-lg"
+          style={{ background: 'rgba(247,241,224,.9)', backdropFilter: 'blur(8px)' }}
+        >
+          <div className="rounded-full overflow-hidden ring-1 ring-[#322b24]/20 bg-[#efe4cc]">
+            <AvatarRenderer avatar={avatarData} size={34} />
+          </div>
+          <div className="leading-none">
+            <p className="text-[#29251f] font-serif text-[13px]">{name}</p>
+            <p className="text-[#6d6356] text-[9px] uppercase tracking-[0.16em] mt-1">in town</p>
           </div>
         </div>
 
         {roomLabel && (
-          <div className="bg-black/70 backdrop-blur rounded-2xl px-4 py-2 text-center">
-            <p className="text-white font-bold text-sm">{roomLabel}</p>
+          <div
+            className="px-4 py-2 rounded-full border border-[#2f2a23]/15 shadow-md"
+            style={{ background: 'rgba(247,241,224,.88)', backdropFilter: 'blur(8px)' }}
+          >
+            <p className="text-[#312c25] font-serif text-[13px]">{roomLabel}</p>
           </div>
         )}
 
-        <div className="flex flex-col items-end gap-2 pointer-events-auto">
-          <div className="bg-black/70 backdrop-blur rounded-2xl px-3 py-2 flex items-center gap-2">
-            <span className="text-lg">🪙</span>
-            <span className="text-amber-300 font-bold text-sm">{coins}</span>
+        <div className="pointer-events-auto flex items-center gap-2">
+          <div className="px-3 py-2 rounded-full border border-[#2f2a23]/15 bg-[#f7f1e0]/90 shadow-md flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#b78a2e] shadow-[0_0_8px_rgba(183,138,46,.35)]" />
+            <span className="text-[#4d4438] text-[11px] font-semibold">{coins}</span>
           </div>
-          {onExitRoom ? (
-            <button onClick={onExitRoom} className="bg-black/70 backdrop-blur rounded-xl px-3 py-1.5 text-white text-xs font-semibold hover:bg-white/20 transition-all">
-              ← Hub
-            </button>
-          ) : (
-            <button onClick={onSignOut} className="bg-black/70 backdrop-blur rounded-xl px-3 py-1.5 text-white/60 text-xs hover:text-white transition-all">
-              Exit
-            </button>
-          )}
+          <button
+            onClick={onExitRoom ?? onSignOut}
+            className="px-3 py-2 rounded-full border border-[#2f2a23]/15 bg-[#f7f1e0]/90 text-[#4d4438] text-[11px] hover:bg-[#fffaf0] transition-colors shadow-md"
+          >
+            {onExitRoom ? 'Town' : 'Leave'}
+          </button>
         </div>
       </div>
     </div>
