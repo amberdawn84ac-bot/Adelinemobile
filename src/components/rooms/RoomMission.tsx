@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Track, GradeBand } from '../../types/game'
+import { Track, GradeBand, FallbackMission } from '../../types/game'
 import { generateLesson, recordCompletion, recordTranscriptCredit } from '../../lib/brainClient'
 
 interface Props {
@@ -11,6 +11,7 @@ interface Props {
   systemContext: string
   studentId: string | null
   gradeBand: GradeBand
+  stormMission?: FallbackMission
   onComplete: (description: string, tracks: Track[], xp: number, coins: number) => void
   onBack: () => void
 }
@@ -27,7 +28,7 @@ interface Mission {
 
 export default function RoomMission({
   roomId, roomLabel, roomEmoji, roomTracks, playerName,
-  systemContext, studentId, gradeBand, onComplete, onBack
+  systemContext, studentId, gradeBand, stormMission, onComplete, onBack
 }: Props) {
   const [mission, setMission] = useState<Mission | null>(null)
   const [response, setResponse] = useState('')
@@ -40,6 +41,12 @@ export default function RoomMission({
   useEffect(() => { loadMission() }, [])
 
   async function loadMission() {
+    if (stormMission) {
+      setMission({ ...stormMission, fromBrain: false })
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
 
     if (studentId) {
