@@ -1,10 +1,41 @@
 @import "tailwindcss";
 
 @layer base {
-  body {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  :root {
+    font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+    color: #2d2924;
+    background: #ebe3cf;
   }
-  h1, h2, h3 {
-    font-family: 'Playfair Display', Georgia, serif;
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    width: 100%;
+  }
+
+  body {
+    margin: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+    font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+    background: #ebe3cf;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-serif {
+    font-family: 'Libre Baskerville', Georgia, serif;
+  }
+
+  button,
+  input,
+  textarea {
+    font: inherit;
+  }
+
+  button {
+    -webkit-tap-highlight-color: transparent;
   }
 }
