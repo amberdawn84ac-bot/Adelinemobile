@@ -1,4 +1,3 @@
-// src/pages/AdelineKitchen.tsx
 import { useState, useRef, useEffect } from 'react'
 import { streamConversation } from '../lib/brainClient'
 import { GradeBand } from '../types/game'
@@ -18,55 +17,38 @@ interface Props {
 
 export default function AdelineKitchen({ studentId, playerName, gradeBand, onBack }: Props) {
   const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'assistant',
-      content: `Come on in, ${playerName}. Pull up a chair. What's on your mind?`,
-    },
+    { role:'assistant', content:`You made it in, ${playerName}. Kettle's still warm. What did you find?` },
   ])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  useEffect(() => { bottomRef.current?.scrollIntoView({behavior:'smooth'}) }, [messages])
 
   async function send() {
     const text = input.trim()
     if (!text || streaming) return
     setInput('')
-
-    const userMsg: Message = { role: 'user', content: text }
-    const assistantMsg: Message = { role: 'assistant', content: '', streaming: true }
-    setMessages(prev => [...prev, userMsg, assistantMsg])
+    const userMsg: Message = {role:'user',content:text}
+    const assistantMsg: Message = {role:'assistant',content:'',streaming:true}
+    setMessages(prev => [...prev,userMsg,assistantMsg])
     setStreaming(true)
 
-    // Build history including the message we're about to send
-    const history = [
-      ...messages.filter(m => !m.streaming).slice(-9),
-      { role: 'user' as const, content: text },
-    ].map(m => ({ role: m.role, content: m.content }))
+    const history = [...messages.filter(m => !m.streaming).slice(-9),{role:'user' as const,content:text}]
+      .map(m => ({role:m.role,content:m.content}))
 
-    // Cancel any in-flight stream before starting a new one
     abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
 
     await streamConversation(
-      {
-        student_id: studentId ?? 'guest',
-        message: text,
-        grade_level: gradeBand,
-        conversation_history: history,
-      },
-      (delta) => {
+      {student_id:studentId ?? 'guest',message:text,grade_level:gradeBand,conversation_history:history},
+      delta => {
         setMessages(prev => {
           const updated = [...prev]
           const last = updated[updated.length - 1]
-          if (last.role === 'assistant') {
-            updated[updated.length - 1] = { ...last, content: last.content + delta }
-          }
+          if (last.role === 'assistant') updated[updated.length - 1] = {...last,content:last.content + delta}
           return updated
         })
       },
@@ -74,105 +56,90 @@ export default function AdelineKitchen({ studentId, playerName, gradeBand, onBac
         setMessages(prev => {
           const updated = [...prev]
           const last = updated[updated.length - 1]
-          if (last.role === 'assistant') {
-            updated[updated.length - 1] = { ...last, streaming: false }
-          }
+          if (last.role === 'assistant') updated[updated.length - 1] = {...last,streaming:false}
           return updated
         })
         setStreaming(false)
       },
-      (err) => {
+      err => {
         setMessages(prev => {
           const updated = [...prev]
           const last = updated[updated.length - 1]
-          if (last.role === 'assistant') {
-            updated[updated.length - 1] = {
-              ...last,
-              content: "My thoughts got a little tangled — try again in a moment.",
-              streaming: false,
-            }
-          }
+          if (last.role === 'assistant') updated[updated.length - 1] = {...last,content:'I lost that thread. Tell me the last part again.',streaming:false}
           return updated
         })
         setStreaming(false)
-        console.warn('Kitchen stream error:', err)
+        console.warn('Kitchen stream error:',err)
       },
       controller.signal,
     )
   }
 
-  useEffect(() => {
-    return () => { abortRef.current?.abort() }
-  }, [])
+  useEffect(() => () => { abortRef.current?.abort() }, [])
 
   return (
-    <div className="flex flex-col h-full bg-amber-50">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-amber-100 shrink-0">
-        <button
-          onClick={onBack}
-          className="p-2 rounded-xl hover:bg-slate-100 text-slate-500 transition-colors"
-        >
-          ←
-        </button>
-        <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-amber-400 shadow">
+    <div className="relative flex h-full flex-col overflow-hidden bg-[#d8cfba] text-[#302a24]">
+      <div className="absolute inset-0 opacity-30" style={{backgroundImage:'radial-gradient(#473b31 .6px, transparent .7px)',backgroundSize:'5px 5px'}} />
+      <div className="absolute left-0 top-0 h-32 w-full bg-gradient-to-b from-[#705845]/20 to-transparent" />
+      <div className="absolute -left-20 bottom-12 h-72 w-72 rounded-full bg-[#315d58]/8 blur-3xl" />
+      <div className="absolute -right-24 top-24 h-72 w-72 rounded-full bg-[#8d3451]/8 blur-3xl" />
+
+      <div className="relative z-10 flex shrink-0 items-center gap-3 border-b border-[#44382f]/15 bg-[#efe5cf]/88 px-4 py-3 backdrop-blur-sm">
+        <button onClick={onBack} className="rounded-full border border-[#41372e]/15 bg-[#fff8e9]/55 px-3 py-2 font-serif text-xs">← outside</button>
+        <div className="h-11 w-11 overflow-hidden rounded-full border border-[#41372e]/20 bg-[#e2d3b6] shadow-md">
           <img
             src="/adeline_portrait.png"
             alt="Adeline"
-            className="w-full h-full object-cover"
+            className="h-full w-full object-cover"
             onError={e => {
               e.currentTarget.style.display = 'none'
-              if (e.currentTarget.parentElement) {
-                e.currentTarget.parentElement.style.backgroundColor = '#D97706'
-                e.currentTarget.parentElement.innerHTML =
-                  '<span style="color:white;font-size:16px;display:flex;align-items:center;justify-content:center;height:100%">A</span>'
-              }
+              if (e.currentTarget.parentElement) e.currentTarget.parentElement.innerHTML = '<span style="font-family:serif;font-size:18px;display:flex;align-items:center;justify-content:center;height:100%;color:#4b4036">A</span>'
             }}
           />
         </div>
         <div>
-          <p className="font-bold text-slate-800 text-sm">Adeline's Kitchen</p>
-          <p className="text-xs text-amber-600">Always home, always listening</p>
+          <p className="font-serif text-sm">Adeline's kitchen</p>
+          <p className="mt-0.5 font-serif text-[10px] italic text-[#786a59]">stove warm · back door open</p>
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div
-              className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
-                msg.role === 'user'
-                  ? 'bg-amber-500 text-white rounded-br-sm'
-                  : 'bg-white text-slate-700 border border-amber-100 rounded-bl-sm shadow-sm'
-              }`}
-            >
-              {msg.content || (msg.streaming ? <span className="animate-pulse text-slate-300">...</span> : '')}
+      <div className="relative z-10 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+        <div className="mx-auto max-w-2xl space-y-4">
+          {messages.map((msg,i) => (
+            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div
+                className={`max-w-[86%] px-4 py-3 font-serif text-sm leading-6 shadow-sm ${
+                  msg.role === 'user'
+                    ? 'rounded-[18px_18px_6px_18px] border border-[#315d58]/20 bg-[#315d58] text-[#fff9ec]'
+                    : 'rounded-[18px_18px_18px_6px] border border-[#463a30]/15 bg-[#f4ecd9]/92 text-[#433a31]'
+                }`}
+              >
+                {msg.content || (msg.streaming ? <span className="italic text-[#897b68]">thinking…</span> : '')}
+              </div>
             </div>
-          </div>
-        ))}
-        <div ref={bottomRef} />
+          ))}
+          <div ref={bottomRef} />
+        </div>
       </div>
 
-      {/* Input */}
-      <div className="px-4 py-3 bg-white border-t border-amber-100 shrink-0">
-        <div className="flex gap-2">
+      <div className="relative z-10 shrink-0 border-t border-[#44382f]/15 bg-[#efe5cf]/92 px-4 py-3 backdrop-blur-sm sm:px-6">
+        <div className="mx-auto flex max-w-2xl gap-2">
           <input
             type="text"
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') send() }}
-            placeholder="Talk to Adeline..."
-            className="flex-1 px-4 py-2.5 rounded-2xl border border-slate-200 text-sm focus:outline-none focus:border-amber-400 bg-white"
+            placeholder="Tell Adeline what happened…"
+            className="flex-1 rounded-full border border-[#493e33]/20 bg-[#fff9ec]/70 px-4 py-2.5 font-serif text-sm outline-none placeholder:text-[#8a7b68] focus:border-[#315d58]/45"
             autoFocus
             disabled={streaming}
           />
           <button
             onClick={send}
             disabled={!input.trim() || streaming}
-            className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-white font-bold rounded-2xl text-sm transition-all"
+            className="rounded-full border border-[#5f436a]/20 bg-[#654a7b] px-5 py-2.5 font-serif text-sm text-[#fff8e9] disabled:opacity-35"
           >
-            Send
+            tell her
           </button>
         </div>
       </div>
