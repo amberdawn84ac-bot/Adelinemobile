@@ -15,5 +15,5 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm install
+      - run: npm install --force
       - run: npm run build
