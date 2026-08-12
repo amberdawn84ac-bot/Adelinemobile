@@ -1,5 +1,5 @@
 export type ResourceUsePolicy = 'LINK' | 'ADAPT_WITH_LICENSE_CHECK' | 'OPEN_REUSE'
-export type ResourceKind = 'curriculum' | 'game' | 'simulation' | 'primary_sources' | 'coding' | 'reference'
+export type ResourceKind = 'curriculum' | 'game' | 'simulation' | 'primary_sources' | 'coding' | 'reference' | 'dataset' | 'map' | 'virtual_museum' | 'citizen_science'
 
 export interface OpenLearningResource {
   id: string
@@ -16,159 +16,24 @@ export interface OpenLearningResource {
   featured?: boolean
 }
 
-/**
- * Curated external learning resources for Dear Adeline.
- *
- * IMPORTANT: "free" does not mean "free to copy into Dear Adeline".
- * `policy` is intentionally conservative. Before ingesting, remixing, mirroring,
- * embedding, or AI-transforming third-party content, verify the current license
- * for the exact item/edition being used.
- */
+/** Curated raw material for Dear Adeline missions. Free never automatically means copyable. */
 export const OPEN_LEARNING_RESOURCES: OpenLearningResource[] = [
-  {
-    id: 'makecode-arcade',
-    title: 'MakeCode Arcade',
-    provider: 'Microsoft MakeCode',
-    description: 'Build real retro-style games with blocks and code. Best used as a Computer Lab creation portal.',
-    url: 'https://arcade.makecode.com/',
-    subjects: ['Computer Science', 'Game Design', 'Math'],
-    gradeBands: ['5-8', '9-12'],
-    kind: 'coding',
-    policy: 'LINK',
-    licenseNote: 'Link to the live tool. Do not copy Microsoft branding, lessons, or assets into Dear Adeline without checking the license for that material.',
-    missionIdeas: [
-      'Build a game with a player, enemy, score, and win condition.',
-      'Remix a starter game and explain three changes you made.',
-      'Create a game that models a science or history concept.'
-    ],
-    featured: true,
-  },
-  {
-    id: 'loc-primary-sources',
-    title: 'Primary Source Sets',
-    provider: 'Library of Congress',
-    description: 'Curated historical documents, photographs, newspapers, maps, recordings, and teacher guides.',
-    url: 'https://www.loc.gov/programs/teachers/classroom-materials/primary-source-sets/',
-    subjects: ['History', 'Government', 'Justice', 'English'],
-    gradeBands: ['3-5', '6-8', '9-12'],
-    kind: 'primary_sources',
-    policy: 'ADAPT_WITH_LICENSE_CHECK',
-    licenseNote: 'The Library provides extensive free access, but rights can vary by item. Prefer its “Free to Use and Reuse” sets and verify the rights statement on each item before republishing.',
-    missionIdeas: [
-      'Build an evidence board using only primary sources.',
-      'Compare two contemporary accounts of the same event.',
-      'Identify what a source proves, suggests, and cannot establish.'
-    ],
-    featured: true,
-  },
-  {
-    id: 'loc-child-labor',
-    title: 'Child Labor Primary Source Set',
-    provider: 'Library of Congress',
-    description: 'Photographs, cartoons, interviews, newspapers, and historical context for investigating child labor and reform.',
-    url: 'https://www.loc.gov/classroom-materials/child-labor/',
-    subjects: ['Justice', 'History', 'Economics', 'English'],
-    gradeBands: ['6-8', '9-12'],
-    kind: 'primary_sources',
-    policy: 'ADAPT_WITH_LICENSE_CHECK',
-    licenseNote: 'Use as an external evidence source. Check each primary source item’s rights statement before hosting or republishing it.',
-    missionIdeas: [
-      'Justice Center case: Why did businesses employ children, who benefited, and what changed?',
-      'Calculate wages and family income from historical scenarios.',
-      'Write a reform argument supported by primary evidence.'
-    ],
-    featured: true,
-  },
-  {
-    id: 'core-knowledge',
-    title: 'Core Knowledge Curriculum',
-    provider: 'Core Knowledge Foundation',
-    description: 'Large free curriculum library for K–8 language arts, history/geography, science, math, music, and more.',
-    url: 'https://www.coreknowledge.org/download-free-curriculum/',
-    subjects: ['English', 'History', 'Geography', 'Science', 'Math', 'Arts'],
-    gradeBands: ['K-2', '3-5', '6-8'],
-    kind: 'curriculum',
-    policy: 'ADAPT_WITH_LICENSE_CHECK',
-    licenseNote: 'Many Core Knowledge resources have reuse permissions, but terms differ by publication. Verify the exact resource license before adapting or importing it.',
-    missionIdeas: [
-      'Use its knowledge sequence to check that a mission has enough academic depth.',
-      'Pull background reading into a student mission only when that exact resource license permits adaptation.',
-      'Use topic coverage to identify curriculum gaps.'
-    ],
-    featured: true,
-  },
-  {
-    id: 'ck12-flexbooks',
-    title: 'CK-12 FlexBooks',
-    provider: 'CK-12 Foundation',
-    description: 'Customizable digital textbooks, interactives, simulations, and practice across middle and high school math and science.',
-    url: 'https://www.ck12.org/fbbrowse/',
-    subjects: ['Math', 'Biology', 'Chemistry', 'Physics', 'Earth Science'],
-    gradeBands: ['6-8', '9-12'],
-    kind: 'curriculum',
-    policy: 'ADAPT_WITH_LICENSE_CHECK',
-    licenseNote: 'CK-12 licenses vary by product/version and may include noncommercial restrictions. Verify the exact FlexBook/resource before importing or adapting.',
-    missionIdeas: [
-      'Use a FlexBook concept as the academic backbone for a game mission.',
-      'Send students to an interactive after they encounter a problem in-world.',
-      'Use high-school biology/physics coverage to validate graduation-level rigor.'
-    ],
-    featured: true,
-  },
-  {
-    id: 'openstax',
-    title: 'OpenStax',
-    provider: 'Rice University',
-    description: 'Free, peer-reviewed textbooks and K–12 resources, especially useful for upper-level academic depth.',
-    url: 'https://openstax.org/',
-    subjects: ['Math', 'Science', 'History', 'Government', 'Economics', 'Writing'],
-    gradeBands: ['9-12'],
-    kind: 'curriculum',
-    policy: 'ADAPT_WITH_LICENSE_CHECK',
-    licenseNote: 'OpenStax is openly licensed, but exact licenses can differ by book/edition and may include noncommercial/share-alike terms. Store the exact edition license before adaptation.',
-    missionIdeas: [
-      'Use chapters as reference depth behind advanced missions.',
-      'Map mission competencies against high-school/college-level concepts.',
-      'Offer optional Deep Dive reading for students who want more.'
-    ],
-    featured: true,
-  },
-  {
-    id: 'mission-us',
-    title: 'Mission US',
-    provider: 'Mission US / WNET',
-    description: 'Free, research-based interactive history games that put students inside major moments in U.S. history.',
-    url: 'https://www.mission-us.org/',
-    subjects: ['History', 'Justice', 'Government', 'English'],
-    gradeBands: ['6-8', '9-12'],
-    kind: 'game',
-    policy: 'LINK',
-    licenseNote: 'Use as an external game portal unless the license for a specific educator resource explicitly permits reuse.',
-    missionIdeas: [
-      'Play a mission, then return to Dear Adeline to build an evidence timeline.',
-      'Compare player choices with primary-source evidence.',
-      'Write what the game helped you understand and what it could not prove.'
-    ],
-    featured: true,
-  },
-  {
-    id: 'phet',
-    title: 'PhET Interactive Simulations',
-    provider: 'University of Colorado Boulder',
-    description: 'Interactive science and math simulations covering physics, chemistry, earth science, biology, and math.',
-    url: 'https://phet.colorado.edu/',
-    subjects: ['Physics', 'Chemistry', 'Math', 'Earth Science', 'Biology'],
-    gradeBands: ['3-5', '6-8', '9-12'],
-    kind: 'simulation',
-    policy: 'LINK',
-    licenseNote: 'PhET licensing has changed over time and current terms may restrict commercial/paid-product redistribution. Link to simulations by default; verify the current license before embedding or redistributing.',
-    missionIdeas: [
-      'Predict what will happen before opening the simulation, then test the prediction.',
-      'Collect measurements from a sim and graph the results.',
-      'Use a simulation to solve an in-world engineering problem.'
-    ],
-    featured: true,
-  },
+  { id:'makecode-arcade', title:'MakeCode Arcade', provider:'Microsoft MakeCode', description:'Build playable retro-style games with blocks and code.', url:'https://arcade.makecode.com/', subjects:['Computer Science','Game Design','Math'], gradeBands:['5-8','9-12'], kind:'coding', policy:'LINK', licenseNote:'Link to the live tool. Check licenses before copying lessons, branding, or assets.', missionIdeas:['Build a game with a player, enemy, score, and win condition.','Remix a starter game and explain three changes.','Create a game that models a science or history concept.'], featured:true },
+  { id:'loc-primary-sources', title:'Primary Source Sets', provider:'Library of Congress', description:'Historical documents, photographs, newspapers, maps, recordings, and teacher guides.', url:'https://www.loc.gov/programs/teachers/classroom-materials/primary-source-sets/', subjects:['History','Government','Justice','English'], gradeBands:['3-5','6-8','9-12'], kind:'primary_sources', policy:'ADAPT_WITH_LICENSE_CHECK', licenseNote:'Rights vary by item. Prefer Free to Use and Reuse collections and retain source metadata.', missionIdeas:['Build an evidence board using only primary sources.','Compare two contemporary accounts of the same event.','Label what each source proves, suggests, and cannot establish.'], featured:true },
+  { id:'loc-free-reuse', title:'Free to Use and Reuse Collections', provider:'Library of Congress', description:'Themed collections the Library identifies as public domain, no-known-copyright, or cleared for public use.', url:'https://www.loc.gov/free-to-use/', subjects:['History','Art','Geography','English','Justice'], gradeBands:['3-5','6-8','9-12'], kind:'primary_sources', policy:'OPEN_REUSE', licenseNote:'The portal is specifically for free-to-use/reuse material, but preserve item rights/source metadata and check any item-specific advisory.', missionIdeas:['Let mission agents select reusable historical art instead of generating fake artifacts.','Create visual evidence decks from photographs and posters.','Build then-and-now comparison missions.'], featured:true },
+  { id:'loc-sanborn', title:'Sanborn Fire Insurance Maps', provider:'Library of Congress', description:'Detailed historical city maps showing buildings, materials, streets, industry, and changing communities.', url:'https://www.loc.gov/collections/sanborn-maps/', subjects:['History','Geography','Math','Justice','Economics'], gradeBands:['6-8','9-12'], kind:'map', policy:'OPEN_REUSE', licenseNote:'Library of Congress states its online Sanborn Maps Collection is public domain and free to use and reuse. Credit the Geography and Map Division.', missionIdeas:['Reconstruct a neighborhood and identify how it changed.','Investigate industry, fire risk, housing, and segregation spatially.','Calculate distance, area, density, and land use from a historical map.'], featured:true },
+  { id:'national-archives', title:'National Archives + DocsTeach', provider:'U.S. National Archives', description:'Thousands of federal records plus document-analysis tools and interactive primary-source activities.', url:'https://www.archives.gov/education', subjects:['History','Government','Justice','English'], gradeBands:['3-5','6-8','9-12'], kind:'primary_sources', policy:'ADAPT_WITH_LICENSE_CHECK', licenseNote:'Federal records are often public domain, but not every item in NARA custody is automatically unrestricted. Check catalog/use information for the exact asset.', missionIdeas:['Justice Center: construct a case from federal records.','Put conflicting records on a timeline and decide what changed.','Use document-analysis prompts as the evidence-room mechanic.'], featured:true },
+  { id:'smithsonian-open-access', title:'Smithsonian Open Access', provider:'Smithsonian Institution', description:'Millions of reusable 2D/3D collection objects and data from museums, archives, research centers, and the National Zoo.', url:'https://www.si.edu/openaccess', subjects:['History','Science','Art','Engineering','Nature','Culture'], gradeBands:['K-2','3-5','6-8','9-12'], kind:'virtual_museum', policy:'OPEN_REUSE', licenseNote:'Use only assets marked CC0/Open Access. Smithsonian says those assets may be transformed, distributed, and used commercially; third-party rights can still apply.', missionIdeas:['Populate missions with real museum objects instead of decorative clip art.','Create an artifact detective game around a mystery object.','Use downloadable 3D objects in future museum/lab experiences.'], featured:true },
+  { id:'smithsonian-learning-lab', title:'Smithsonian Learning Lab', provider:'Smithsonian Institution', description:'Searchable museum resources and educator/student collections for discovery, annotation, and project building.', url:'https://learninglab.si.edu/', subjects:['History','Science','Art','Culture','English'], gradeBands:['K-2','3-5','6-8','9-12'], kind:'virtual_museum', policy:'ADAPT_WITH_LICENSE_CHECK', licenseNote:'CC0-marked assets are open reuse. Other Learning Lab material can carry usage conditions; inspect each asset.', missionIdeas:['Send students on a curated museum scavenger hunt.','Build a collection that argues a historical interpretation.','Compare artifacts from different eras or cultures.'] },
+  { id:'nasa-learning', title:'NASA Learning Resources', provider:'NASA', description:'Hands-on STEM activities, interactives, challenges, mission resources, careers, and space science.', url:'https://www.nasa.gov/learning-resources/', subjects:['Astronomy','Physics','Engineering','Earth Science','Computer Science'], gradeBands:['K-2','3-5','6-8','9-12'], kind:'reference', policy:'ADAPT_WITH_LICENSE_CHECK', licenseNote:'NASA material is often broadly usable, but NASA media and third-party content have specific usage rules. Verify the exact asset before republishing.', missionIdeas:['Design a habitat under real mission constraints.','Investigate an actual NASA mission and build a briefing.','Use spacecraft engineering problems as Maker Lab contracts.'], featured:true },
+  { id:'census-sis', title:'Statistics in Schools', provider:'U.S. Census Bureau', description:'Free K-12 activities using real Census Bureau statistics across math, geography, history, English, and sociology.', url:'https://www.census.gov/schools/', subjects:['Math','Statistics','Geography','History','Economics','Sociology'], gradeBands:['K-2','3-5','6-8','9-12'], kind:'dataset', policy:'ADAPT_WITH_LICENSE_CHECK', licenseNote:'Excellent source of public federal data. Check individual activity/media notices before republishing worksheets or non-data content.', missionIdeas:['Make students town planners using real population data.','Investigate demographic change instead of answering invented word problems.','Build graphs to test a claim made by an NPC.'], featured:true },
+  { id:'zooniverse', title:'Zooniverse Citizen Science', provider:'Zooniverse', description:'Students can contribute to active research projects in astronomy, ecology, history, medicine, and more.', url:'https://www.zooniverse.org/get-involved/educate', subjects:['Science','Astronomy','Biology','Ecology','History','Research'], gradeBands:['6-8','9-12'], kind:'citizen_science', policy:'LINK', licenseNote:'Use as a live external research portal. Project data/assets can have project-specific terms.', missionIdeas:['Complete a real classification milestone and keep a research log.','Compare student classifications and discuss uncertainty.','Earn Researcher progress for contributing to an active science project.'], featured:true },
+  { id:'core-knowledge', title:'Core Knowledge Curriculum', provider:'Core Knowledge Foundation', description:'Large free curriculum library for K-8 language arts, history/geography, science, math, music, and more.', url:'https://www.coreknowledge.org/download-free-curriculum/', subjects:['English','History','Geography','Science','Math','Arts'], gradeBands:['K-2','3-5','6-8'], kind:'curriculum', policy:'ADAPT_WITH_LICENSE_CHECK', licenseNote:'Terms differ by publication. Verify the exact resource before adapting or importing.', missionIdeas:['Use the sequence to check mission academic depth.','Use permitted readings as background resources.','Use topic coverage to identify curriculum gaps.'], featured:true },
+  { id:'ck12-flexbooks', title:'CK-12 FlexBooks', provider:'CK-12 Foundation', description:'Digital textbooks, interactives, simulations, and practice across middle/high school math and science.', url:'https://www.ck12.org/fbbrowse/', subjects:['Math','Biology','Chemistry','Physics','Earth Science'], gradeBands:['6-8','9-12'], kind:'curriculum', policy:'ADAPT_WITH_LICENSE_CHECK', licenseNote:'Licenses vary by product/version and may include noncommercial restrictions. Verify exact resource.', missionIdeas:['Use a concept as academic backbone for a game mission.','Send students to an interactive after an in-world problem.','Validate graduation-level rigor.'], featured:true },
+  { id:'openstax', title:'OpenStax', provider:'Rice University', description:'Free peer-reviewed textbooks and K-12 resources useful for upper-level academic depth.', url:'https://openstax.org/', subjects:['Math','Science','History','Government','Economics','Writing'], gradeBands:['9-12'], kind:'curriculum', policy:'ADAPT_WITH_LICENSE_CHECK', licenseNote:'Exact licenses differ by book/edition and can include noncommercial/share-alike terms. Store the exact edition license before adaptation.', missionIdeas:['Use chapters as reference depth behind advanced missions.','Map competencies against high-school/college-level concepts.','Offer optional Deep Dive reading.'], featured:true },
+  { id:'mission-us', title:'Mission US', provider:'Mission US / WNET', description:'Research-based interactive history games placing students inside major moments in U.S. history.', url:'https://www.mission-us.org/', subjects:['History','Justice','Government','English'], gradeBands:['6-8','9-12'], kind:'game', policy:'LINK', licenseNote:'Use as an external game portal unless a specific resource license permits reuse.', missionIdeas:['Play, then build an evidence timeline in Dear Adeline.','Compare player choices with primary sources.','Identify what the game clarifies and what it cannot prove.'], featured:true },
+  { id:'phet', title:'PhET Interactive Simulations', provider:'University of Colorado Boulder', description:'Interactive science and math simulations covering physics, chemistry, earth science, biology, and math.', url:'https://phet.colorado.edu/', subjects:['Physics','Chemistry','Math','Earth Science','Biology'], gradeBands:['3-5','6-8','9-12'], kind:'simulation', policy:'LINK', licenseNote:'Link by default. Current licensing can restrict redistribution/commercial use; verify before embedding.', missionIdeas:['Predict before opening the simulation, then test.','Collect measurements and graph results.','Use a simulation to solve an in-world engineering problem.'], featured:true },
+  { id:'geogebra', title:'GeoGebra', provider:'GeoGebra', description:'Interactive geometry, algebra, graphing, statistics, and 3D mathematics tools.', url:'https://www.geogebra.org/', subjects:['Math','Geometry','Algebra','Statistics'], gradeBands:['6-8','9-12'], kind:'simulation', policy:'LINK', licenseNote:'GeoGebra states its software/services/materials are free for noncommercial educational use; commercial uses can require a special license. Link rather than embed by default.', missionIdeas:['Survey a virtual site and calculate dimensions.','Model projectile or growth data.','Build geometric constructions as engineering tools.'] },
 ]
 
 export const RESOURCE_POLICY_LABELS: Record<ResourceUsePolicy, { label: string; short: string }> = {
