@@ -3,6 +3,7 @@ import { useAuth } from './context/AuthContext'
 import LandingPage from './pages/LandingPage'
 import Auth from './pages/Auth'
 import GameShell from './pages/GameShell'
+import OpenLearningVaultPage from './pages/OpenLearningVaultPage'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, guestSession, isLoading } = useAuth()
@@ -23,6 +24,9 @@ export default function App() {
         <Route path="/auth" element={<Auth />} />
         <Route path="/game" element={
           <RequireAuth><GameShell /></RequireAuth>
+        } />
+        <Route path="/open-learning-vault" element={
+          <RequireAuth><OpenLearningVaultPage /></RequireAuth>
         } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
