@@ -4,6 +4,7 @@ import LandingPage from './pages/LandingPage'
 import Auth from './pages/Auth'
 import GameShell from './pages/GameShell'
 import OpenLearningVaultPage from './pages/OpenLearningVaultPage'
+import LibraryShelf from './pages/LibraryShelf'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, guestSession, isLoading } = useAuth()
@@ -27,6 +28,9 @@ export default function App() {
         } />
         <Route path="/open-learning-vault" element={
           <RequireAuth><OpenLearningVaultPage /></RequireAuth>
+        } />
+        <Route path="/library" element={
+          <RequireAuth><LibraryShelf /></RequireAuth>
         } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
